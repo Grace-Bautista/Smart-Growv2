@@ -99,7 +99,7 @@ class _UserManagementBodyState extends State<_UserManagementBody> {
                         onDelete: () => _confirmAction(
                           title: 'Delete user?',
                           message:
-                              'This permanently deletes ${users[index].email}. Audit logs are preserved.',
+                              'This permanently deletes this account. This action cannot be undone.',
                           action: () => UserManagementService.deleteUser(
                             users[index].uid,
                           ),
@@ -242,10 +242,15 @@ class _UserTile extends StatelessWidget {
     final statusColor = active ? Colors.green : Colors.redAccent;
 
     return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -267,12 +272,15 @@ class _UserTile extends StatelessWidget {
                         user.name.isEmpty ? user.email : user.name,
                         style: const TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       Text(
                         user.email,
-                        style: const TextStyle(color: Colors.black54),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
                     ],
                   ),
@@ -305,38 +313,95 @@ class _UserTile extends StatelessWidget {
                     icon: const Icon(Icons.edit, size: 18),
                     label: const Text('Edit'),
                   ),
-                  OutlinedButton.icon(
-                    onPressed: busy ? null : onResetPassword,
-                    icon: const Icon(Icons.lock_reset, size: 18),
-                    label: const Text('Reset'),
-                  ),
-                  if (active)
-                    OutlinedButton.icon(
-                      onPressed: busy ? null : onDeactivate,
-                      icon: const Icon(Icons.block, size: 18),
-                      label: const Text('Deactivate'),
-                    )
-                  else
-                    OutlinedButton.icon(
-                      onPressed: busy ? null : onReactivate,
-                      icon: const Icon(Icons.check_circle, size: 18),
-                      label: const Text('Reactivate'),
-                    ),
-                  OutlinedButton.icon(
-                    onPressed: busy ? null : onDelete,
-                    icon: const Icon(Icons.delete, size: 18),
-                    label: const Text('Delete'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.redAccent,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: busy ? null : onResetPassword,
+                      icon: const Icon(Icons.lock_reset, size: 18),
+                      label: const Text('Reset Password'),
                     ),
                   ),
-                ] else
-                  const Text(
-                    'Admin account',
-                    style: TextStyle(color: Colors.black54),
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'edit') {
+                        onEdit();
+                      } else if (value == 'status') {
+                        if (active) {
+                          onDeactivate();
+                        } else {
+                          onReactivate();
+                        }
+                      } else if (value == 'delete') {
+                        onDelete();
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                      PopupMenuItem(
+                        value: 'status',
+                        child: Text(active ? 'Deactivate' : 'Reactivate'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Text('Delete'),
+                      ),
+                    ],
                   ),
+                ],
               ],
             ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3EADF),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    user.role.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 10),
+
+                Icon(Icons.circle, size: 8, color: statusColor),
+
+                const SizedBox(width: 6),
+
+                Text(
+                  active ? 'Active' : 'Inactive',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: statusColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (canManage)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: busy ? null : onResetPassword,
+                  icon: const Icon(Icons.lock_reset, size: 18),
+                  label: const Text('Reset Password'),
+                ),
+              )
+            else
+              const Text(
+                'Admin account',
+                style: TextStyle(color: Colors.black54),
+              ),
           ],
         ),
       ),
