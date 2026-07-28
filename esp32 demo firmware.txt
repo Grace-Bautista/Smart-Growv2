@@ -1,0 +1,385 @@
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <SparkFun_SCD4x_Arduino_Library.h>
+#include <WebServer.h>
+#include <WiFi.h>
+#include <Wire.h>
+
+const char* ssid = "ESP32-DEMO";
+const char* password = "12345678";
+
+#define RELAY_PUMP_PIN 25
+#define RELAY_FAN_PIN 26
+#define WATER_VCC_PIN 33
+#define WATER_ADC_PIN 35
+
+#define OLED_WIDTH 128
+#define OLED_HEIGHT 64
+#define OLED_RESET -1
+#define OLED_ADDRESS 0x3C
+
+const bool RELAY_ACTIVE_LOW = true;
+const bool DEFAULT_OUTPUTS_ENABLED = true;
+
+WebServer server(80);
+SCD4x scd40;
+Adafruit_SSD1306 oled(OLED_WIDTH, OLED_HEIGHT, &Wire, OLED_RESET);
+
+float lastTemp = NAN;
+float lastHumidity = NAN;
+uint16_t lastCO2 = 0;
+bool sensorOnline = false;
+bool outputsEnabled = DEFAULT_OUTPUTS_ENABLED;
+bool fanOn = false;
+bool pumpOn = false;
+bool uvOn = false;
+bool waterPresent = false;
+
+unsigned long lastSensorRead = 0;
+unsigned long lastWaterRead = 0;
+const unsigned long SENSOR_INTERVAL = 5000;
+const unsigned long WATER_INTERVAL = 900000;
+
+enum FanMode { FAN_MANUAL, FAN_AUTO };
+FanMode fanMode = FAN_MANUAL;
+
+void writeRelay(int pin, bool enabled) {
+  digitalWrite(pin, RELAY_ACTIVE_LOW ? (enabled ? LOW : HIGH)
+                                     : (enabled ? HIGH : LOW));
+}
+
+String boolJson(const char* key, bool value) {
+  return String("{\"") + key + "\":" + (value ? "1" : "0") + "}";
+}
+
+String nullableFloat(float value, int decimals) {
+  return isnan(value) ? "null" : String(value, decimals);
+}
+
+String nullableInt(uint16_t value) {
+  return value == 0 ? "null" : String(value);
+}
+
+void clearSensorCache() {
+  lastTemp = NAN;
+  lastHumidity = NAN;
+  lastCO2 = 0;
+}
+
+bool sampleWaterSensor() {
+  digitalWrite(WATER_VCC_PIN, HIGH);
+  delay(50);
+  const int raw = analogRead(WATER_ADC_PIN);
+  digitalWrite(WATER_VCC_PIN, LOW);
+  return raw > 1000;
+}
+
+bool refreshWaterState(bool force = false) {
+  if (!force && millis() - lastWaterRead < WATER_INTERVAL) {
+    return waterPresent;
+  }
+
+  lastWaterRead = millis();
+  waterPresent = sampleWaterSensor();
+  return waterPresent;
+}
+
+void drawLineText(int y, const String& text, int size = 1) {
+  oled.setTextSize(size);
+  oled.setCursor(0, y);
+  oled.print(text);
+}
+
+void updateDisplay() {
+  oled.clearDisplay();
+  oled.setTextColor(SSD1306_WHITE);
+
+  drawLineText(0, "SMART GROW", 1);
+
+  if (!outputsEnabled) {
+    drawLineText(14, "Outputs disabled", 1);
+    drawLineText(28, "Fan OFF  Pump OFF", 1);
+    drawLineText(42, sensorOnline ? "Sensors online" : "Sensor offline", 1);
+    oled.display();
+    return;
+  }
+
+  if (!sensorOnline) {
+    drawLineText(14, "SCD40 starting...", 1);
+    drawLineText(28, "Check wiring if", 1);
+    drawLineText(42, "this stays here.", 1);
+    oled.display();
+    return;
+  }
+
+  drawLineText(14, "T:" + (isnan(lastTemp) ? String("--.-") : String(lastTemp, 1)) + "C", 1);
+  drawLineText(26, "H:" + (isnan(lastHumidity) ? String("--") : String((int)lastHumidity)) + "%", 1);
+  drawLineText(38, "CO2:" + (lastCO2 == 0 ? String("----") : String(lastCO2)) + "ppm", 1);
+  drawLineText(
+    52,
+    String("Fan:") + (fanOn ? "ON " : "OFF") +
+        " Pump:" + (pumpOn ? "ON" : "OFF"),
+    1
+  );
+  oled.display();
+}
+
+void applyFanState(bool enabled) {
+  fanOn = outputsEnabled && enabled;
+  writeRelay(RELAY_FAN_PIN, fanOn);
+}
+
+void applyPumpState(bool enabled) {
+  pumpOn = outputsEnabled && enabled;
+  writeRelay(RELAY_PUMP_PIN, pumpOn);
+}
+
+void applyOutputsEnabled(bool enabled) {
+  outputsEnabled = enabled;
+
+  if (!outputsEnabled) {
+    fanOn = false;
+    pumpOn = false;
+    writeRelay(RELAY_FAN_PIN, false);
+    writeRelay(RELAY_PUMP_PIN, false);
+  } else {
+    writeRelay(RELAY_FAN_PIN, fanOn);
+    writeRelay(RELAY_PUMP_PIN, pumpOn);
+  }
+
+  updateDisplay();
+}
+
+bool initializeSensor() {
+  sensorOnline = false;
+  clearSensorCache();
+  updateDisplay();
+
+  for (int attempt = 0; attempt < 5; attempt++) {
+    delay(500);
+    if (scd40.begin()) {
+      scd40.startPeriodicMeasurement();
+      sensorOnline = true;
+      lastSensorRead = millis();
+      updateDisplay();
+      return true;
+    }
+  }
+
+  updateDisplay();
+  return false;
+}
+
+void updateFanAutoLogic() {
+  if (fanMode != FAN_AUTO || !outputsEnabled || !sensorOnline) return;
+
+  const float TEMP_ON = 28.0;
+  const float TEMP_OFF = 26.0;
+  const int CO2_ON = 900;
+  const int CO2_OFF = 700;
+
+  bool requestOn = false;
+  bool requestOff = false;
+
+  if (!isnan(lastTemp)) {
+    if (lastTemp >= TEMP_ON) requestOn = true;
+    if (lastTemp <= TEMP_OFF) requestOff = true;
+  }
+
+  if (lastCO2 > 0) {
+    if (lastCO2 >= CO2_ON) requestOn = true;
+    if (lastCO2 <= CO2_OFF) requestOff = true;
+  }
+
+  if (requestOn && !fanOn) {
+    applyFanState(true);
+  } else if (requestOff && fanOn) {
+    applyFanState(false);
+  }
+}
+
+void updateSensorData() {
+  if (!sensorOnline) return;
+  if (millis() - lastSensorRead < SENSOR_INTERVAL) return;
+  lastSensorRead = millis();
+
+  if (scd40.readMeasurement()) {
+    lastTemp = scd40.getTemperature();
+    lastHumidity = scd40.getHumidity();
+    lastCO2 = scd40.getCO2();
+    updateFanAutoLogic();
+    updateDisplay();
+  }
+}
+
+void updatePumpAutomation() {
+  const bool dry = !refreshWaterState();
+  if (outputsEnabled && dry && !pumpOn) {
+    applyPumpState(true);
+    updateDisplay();
+  }
+}
+
+void registerRoutes() {
+  server.on("/ping", []() {
+    server.send(200, "application/json", "{\"ok\":true}");
+  });
+
+  server.on("/temperature", []() {
+    server.send(
+      200,
+      "application/json",
+      String("{\"temperature\":") + nullableFloat(lastTemp, 1) + "}"
+    );
+  });
+
+  server.on("/humidity", []() {
+    server.send(
+      200,
+      "application/json",
+      String("{\"humidity\":") + nullableFloat(lastHumidity, 0) + "}"
+    );
+  });
+
+  server.on("/co2", []() {
+    server.send(
+      200,
+      "application/json",
+      String("{\"co2\":") + nullableInt(lastCO2) + "}"
+    );
+  });
+
+  server.on("/water", []() {
+    const bool currentWater = refreshWaterState(true);
+    updateDisplay();
+    server.send(200, "application/json", boolJson("water", currentWater));
+  });
+
+  server.on("/fan/status", []() {
+    server.send(
+      200,
+      "application/json",
+      String("{\"fan\":") + (fanOn ? "1" : "0") +
+          ",\"mode\":\"" + (fanMode == FAN_AUTO ? "auto" : "manual") + "\"}"
+    );
+  });
+
+  server.on("/fan/on", []() {
+    if (fanMode == FAN_MANUAL && outputsEnabled) applyFanState(true);
+    updateDisplay();
+    server.send(200, "application/json", boolJson("fan", fanOn));
+  });
+
+  server.on("/fan/off", []() {
+    if (fanMode == FAN_MANUAL) applyFanState(false);
+    updateDisplay();
+    server.send(200, "application/json", boolJson("fan", fanOn));
+  });
+
+  server.on("/fan/mode/manual", []() {
+    fanMode = FAN_MANUAL;
+    server.send(200, "application/json", "{\"mode\":\"manual\"}");
+  });
+
+  server.on("/fan/mode/auto", []() {
+    fanMode = FAN_AUTO;
+    updateFanAutoLogic();
+    updateDisplay();
+    server.send(200, "application/json", "{\"mode\":\"auto\"}");
+  });
+
+  server.on("/humidifier/status", []() {
+    server.send(200, "application/json", boolJson("humidifier", pumpOn));
+  });
+
+  server.on("/humidifier/on", []() {
+    if (outputsEnabled) applyPumpState(true);
+    updateDisplay();
+    server.send(200, "application/json", boolJson("humidifier", pumpOn));
+  });
+
+  server.on("/humidifier/off", []() {
+    applyPumpState(false);
+    updateDisplay();
+    server.send(200, "application/json", boolJson("humidifier", pumpOn));
+  });
+
+  server.on("/uv/status", []() {
+    server.send(200, "application/json", boolJson("uv", uvOn));
+  });
+
+  server.on("/uv/on", []() {
+    uvOn = true;
+    server.send(200, "application/json", boolJson("uv", uvOn));
+  });
+
+  server.on("/uv/off", []() {
+    uvOn = false;
+    server.send(200, "application/json", boolJson("uv", uvOn));
+  });
+
+  server.on("/power/on", []() {
+    applyOutputsEnabled(true);
+    server.send(200, "application/json", boolJson("power", outputsEnabled));
+  });
+
+  server.on("/power/off", []() {
+    applyOutputsEnabled(false);
+    server.send(200, "application/json", boolJson("power", outputsEnabled));
+  });
+
+  server.on("/power/status", []() {
+    server.send(200, "application/json", boolJson("power", outputsEnabled));
+  });
+
+  server.on("/status", []() {
+    String json = "{";
+    json += "\"power\":" + String(outputsEnabled ? 1 : 0) + ",";
+    json += "\"fan\":" + String(fanOn ? 1 : 0) + ",";
+    json += "\"fanMode\":\"" + String(fanMode == FAN_AUTO ? "auto" : "manual") + "\",";
+    json += "\"pump\":" + String(pumpOn ? 1 : 0) + ",";
+    json += "\"humidifier\":" + String(pumpOn ? 1 : 0) + ",";
+    json += "\"uv\":" + String(uvOn ? 1 : 0) + ",";
+    json += "\"water\":" + String(waterPresent ? 1 : 0) + ",";
+    json += "\"sensorOnline\":" + String(sensorOnline ? 1 : 0) + ",";
+    json += "\"temperature\":" + nullableFloat(lastTemp, 1) + ",";
+    json += "\"humidity\":" + nullableFloat(lastHumidity, 0) + ",";
+    json += "\"co2\":" + nullableInt(lastCO2);
+    json += "}";
+    server.send(200, "application/json", json);
+  });
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(RELAY_PUMP_PIN, OUTPUT);
+  pinMode(RELAY_FAN_PIN, OUTPUT);
+  pinMode(WATER_VCC_PIN, OUTPUT);
+  pinMode(WATER_ADC_PIN, INPUT);
+
+  writeRelay(RELAY_PUMP_PIN, false);
+  writeRelay(RELAY_FAN_PIN, false);
+  digitalWrite(WATER_VCC_PIN, LOW);
+
+  Wire.begin(21, 22);
+
+  oled.begin(SSD1306_SWITCHCAPVCC, OLED_ADDRESS);
+  oled.clearDisplay();
+  oled.display();
+
+  refreshWaterState(true);
+  initializeSensor();
+  applyOutputsEnabled(DEFAULT_OUTPUTS_ENABLED);
+
+  WiFi.softAP(ssid, password);
+  registerRoutes();
+  server.begin();
+  updateDisplay();
+}
+
+void loop() {
+  server.handleClient();
+  updateSensorData();
+  updatePumpAutomation();
+}

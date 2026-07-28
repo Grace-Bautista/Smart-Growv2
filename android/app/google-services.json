@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "652471613625",
+    "firebase_url": "https://mushroom-database-16462-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "mushroom-database-16462",
+    "storage_bucket": "mushroom-database-16462.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:652471613625:android:65267ec67a883397c58368",
+        "android_client_info": {
+          "package_name": "com.example.smart_grow_code"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTKZmJ6K-0_GjnUsgCeKUygxiTz4DuZCU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

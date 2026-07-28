@@ -1,0 +1,28 @@
+{
+    "liveData": {
+      "smartGrow01": {
+        "sensors": {
+          "environmentTemp": 25.4,
+          "humidity": 72,
+          "co2": 400,
+          "waterLevel": 85,
+          "humidifierTemp": 22.5
+        },
+        "components": {
+          "humidifier": false,
+          "ventFan": false,
+          "baseFan": true,
+          "refillPump": "off",
+          "loopPump": true,
+          "uvLight": false
+        },
+        "automation": {
+          "mode": "automatic"
+        },
+        "device": {
+          "online": true,
+          "lastHeartbeat": 0
+        }
+      }
+    }
+  }
