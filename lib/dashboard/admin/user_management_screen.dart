@@ -257,10 +257,15 @@ class _UserTile extends StatelessWidget {
             Row(
               children: [
                 CircleAvatar(
+                  radius: 24,
                   backgroundColor: const Color(0xFFB68C63),
                   child: Text(
                     user.name.isEmpty ? '?' : user.name[0].toUpperCase(),
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -285,42 +290,7 @@ class _UserTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                Chip(
-                  label: Text(user.role.toUpperCase()),
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(Icons.circle, size: 10, color: statusColor),
-                const SizedBox(width: 6),
-                Text(
-                  active ? 'Active' : 'Inactive',
-                  style: TextStyle(color: statusColor),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
                 if (canManage) ...[
-                  OutlinedButton.icon(
-                    onPressed: busy ? null : onEdit,
-                    icon: const Icon(Icons.edit, size: 18),
-                    label: const Text('Edit'),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: busy ? null : onResetPassword,
-                      icon: const Icon(Icons.lock_reset, size: 18),
-                      label: const Text('Reset Password'),
-                    ),
-                  ),
                   PopupMenuButton<String>(
                     onSelected: (value) {
                       if (value == 'edit') {
