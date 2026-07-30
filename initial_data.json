@@ -8,20 +8,29 @@
           "waterLevel": 85,
           "humidifierTemp": 22.5
         },
+        "sensorStatus": {
+          "environmentTemp": {"valid": true, "updatedAt": 0},
+          "humidity": {"valid": true, "updatedAt": 0},
+          "co2": {"valid": true, "updatedAt": 0},
+          "waterLevel": {"valid": true, "updatedAt": 0},
+          "humidifierTemp": {"valid": true, "updatedAt": 0}
+        },
         "components": {
           "humidifier": false,
           "ventFan": false,
           "baseFan": true,
-          "refillPump": "off",
+          "refillPump": false,
           "loopPump": true,
           "uvLight": false
         },
         "automation": {
-          "mode": "automatic"
+          "mode": "automatic",
+          "refillPumpMode": "automatic"
         },
         "device": {
           "online": true,
-          "lastHeartbeat": 0
+          "lastHeartbeat": 0,
+          "bootId": ""
         }
       }
     }

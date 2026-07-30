@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:smart_grow_code/custom_header_button.dart';
 import 'package:smart_grow_code/services/app_settings_service.dart';
-import 'package:smart_grow_code/services/esp32_service.dart';
+import 'package:smart_grow_code/services/sensor_service.dart';
+import 'package:smart_grow_code/models/sensor_data.dart';
 import 'package:smart_grow_code/services/user_management_service.dart';
 import 'package:smart_grow_code/screens/sensor_test_screen.dart';
 import 'package:smart_grow_code/auth/auth_service.dart';
@@ -25,6 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late double bodyFontSize;
   bool _saving = false;
   bool _resettingPassword = false;
+  StreamSubscription<SensorData>? _deviceSubscription;
 
   @override
   void initState() {
@@ -32,17 +35,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final current = AppSettingsService.current;
     headerFontSize = current.headerFontSize;
     bodyFontSize = current.bodyFontSize;
-    _refreshDeviceStatus();
+    _deviceSubscription = SensorService.instance.watchLiveData().listen(_applyDeviceStatus);
   }
 
-  Future<void> _refreshDeviceStatus() async {
-    final snapshot = await Esp32Service.readSnapshot();
+  void _applyDeviceStatus(SensorData data) {
     if (!mounted) return;
     setState(() {
-      deviceConnected = snapshot.connected;
-      deviceOn = snapshot.powerOn;
+      deviceConnected = data.isDeviceAvailable(DateTime.now());
+      deviceOn = (data.humidifierOn ?? false) || (data.ventFanOn ?? false) ||
+          (data.baseFanOn ?? false) || (data.refillPumpOn ?? false) ||
+          (data.loopPumpOn ?? false) || (data.uvLightOn ?? false);
     });
   }
+
+  @override
+  void dispose() { _deviceSubscription?.cancel(); super.dispose(); }
 
   Future<void> _saveAndClose() async {
     if (_saving) return;
@@ -394,9 +401,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   String _getStatusText() {
     if (!deviceConnected) return 'ESP32 not connected';
-    return deviceOn
-        ? 'Fan and pump relays enabled'
-        : 'Fan and pump relays disabled';
+    return deviceOn ? 'One or more controller outputs are ON' : 'Controller outputs are OFF';
   }
 
   Widget _statusIndicator() {

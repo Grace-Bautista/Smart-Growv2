@@ -15,12 +15,17 @@ class ControlPanel extends StatelessWidget {
   final bool fanActive;
   final RefillMode refillMode;
   final bool isActivated;
-  final ValueChanged<double> onTempChanged;
-  final ValueChanged<double> onWaterLevelChanged;
+  final ValueChanged<double>? onTempChanged;
+  final ValueChanged<double>? onWaterLevelChanged;
   final VoidCallback onTogglePump;
   final VoidCallback onToggleFan;
   final ValueChanged<RefillMode> onRefillModeChanged;
   final VoidCallback onActivate;
+  final bool controlsEnabled;
+  final bool pumpPending;
+  final bool fanPending;
+  final bool refillPending;
+  final bool humidifierPending;
 
   const ControlPanel({
     super.key,
@@ -36,6 +41,11 @@ class ControlPanel extends StatelessWidget {
     required this.onToggleFan,
     required this.onRefillModeChanged,
     required this.onActivate,
+    required this.controlsEnabled,
+    required this.pumpPending,
+    required this.fanPending,
+    required this.refillPending,
+    required this.humidifierPending,
   });
 
   bool get _isCritical => waterLevel <= 30;
@@ -94,6 +104,7 @@ class ControlPanel extends StatelessWidget {
                       icon: Icons.compare_arrows,
                       isActive: pumpActive,
                       onTap: onTogglePump,
+                      enabled: controlsEnabled && !pumpPending,
                     ),
                   ),
                   const SizedBox(width: AppTheme.space3),
@@ -104,6 +115,7 @@ class ControlPanel extends StatelessWidget {
                       icon: Icons.cyclone,
                       isActive: fanActive,
                       onTap: onToggleFan,
+                      enabled: controlsEnabled && !fanPending,
                     ),
                   ),
                 ],
@@ -115,12 +127,12 @@ class ControlPanel extends StatelessWidget {
           // ---- Refill water dropdown --------------------------------------
           _RefillDropdown(
             mode: refillMode,
-            onChanged: onRefillModeChanged,
+            onChanged: controlsEnabled && !refillPending ? onRefillModeChanged : null,
           ),
           const SizedBox(height: AppTheme.space4),
 
           // ---- Activate button ---------------------------------------------
-          _ActivateButton(isActivated: isActivated, onTap: onActivate),
+          _ActivateButton(isActivated: isActivated, onTap: controlsEnabled && !humidifierPending ? onActivate : null),
         ],
       ),
     );
@@ -130,7 +142,7 @@ class ControlPanel extends StatelessWidget {
 /// Dropdown that lets the user pick between On / Off / Auto refill modes.
 class _RefillDropdown extends StatelessWidget {
   final RefillMode mode;
-  final ValueChanged<RefillMode> onChanged;
+  final ValueChanged<RefillMode>? onChanged;
 
   const _RefillDropdown({required this.mode, required this.onChanged});
 
@@ -181,7 +193,7 @@ class _RefillDropdown extends StatelessWidget {
             ];
           },
           onChanged: (value) {
-            if (value != null) onChanged(value);
+            if (value != null) onChanged?.call(value);
           },
         ),
       ),
@@ -193,7 +205,7 @@ class _RefillDropdown extends StatelessWidget {
 /// state swap between "Activate" and "Activated".
 class _ActivateButton extends StatefulWidget {
   final bool isActivated;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _ActivateButton({required this.isActivated, required this.onTap});
 

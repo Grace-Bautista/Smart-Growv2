@@ -12,7 +12,7 @@ class SliderTile extends StatelessWidget {
   final double value;
   final double min;
   final double max;
-  final ValueChanged<double> onChanged;
+  final ValueChanged<double>? onChanged;
   final String? warning;
   final Color activeColor;
 

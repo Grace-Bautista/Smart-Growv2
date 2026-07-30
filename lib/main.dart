@@ -1,22 +1,16 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:smart_grow_code/auth/auth_gate.dart';
-import 'package:smart_grow_code/dashboard/dashboard.dart'; //dashboard_screen.dart'; alternative filename
+import 'package:smart_grow_code/dashboard/dashboard.dart';
 import 'package:smart_grow_code/dashboard/login_screen.dart';
 import 'package:smart_grow_code/dashboard/admin/user_management_screen.dart';
 import 'package:smart_grow_code/firebase_options.dart';
-import 'package:smart_grow_code/services/alert_store.dart';//eve added 
+import 'package:smart_grow_code/services/alert_store.dart';
 import 'package:smart_grow_code/screens/sensor_test_screen.dart';
 import 'package:smart_grow_code/services/app_settings_service.dart';
-//eve added
 import 'package:smart_grow_code/services/grow_log_store.dart';
 import 'package:smart_grow_code/services/push_notification_service.dart';
-import 'package:smart_grow_code/services/sensor_monitor_service.dart';
-
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,11 +23,7 @@ void main() async {
   await AppSettingsService.load();
   await PushNotificationService.init();
 
-  // Starts polling the ESP32 right away. Each poll times out in ~2s if the
   // phone isn't on the device's WiFi yet, so this never blocks startup —
-  // it's fire-and-forget on purpose.
-  unawaited(SensorMonitorService.start());
-
   runApp(const SmartGrowApp());
 }
 
@@ -74,7 +64,7 @@ class SmartGrowApp extends StatelessWidget {
           routes: {
             '/': (context) => const AuthGate(),
             '/login': (context) => const LoginScreen(),
-            '/home': (context) => const DashboardScreen(),//alternatively DashboardScreen()
+            '/home': (context) => const DashboardScreen(),
             '/admin/users': (context) => const UserManagementScreen(),
             '/sensor-test': (context) => SensorTestScreen(),
           },

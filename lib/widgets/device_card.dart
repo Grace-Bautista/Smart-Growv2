@@ -11,6 +11,7 @@ class DeviceIconTile extends StatelessWidget {
   final Color iconColor;
   final bool isActive;
   final VoidCallback onTap;
+  final bool enabled;
 
   const DeviceIconTile({
     super.key,
@@ -19,13 +20,14 @@ class DeviceIconTile extends StatelessWidget {
     required this.icon,
     required this.isActive,
     required this.onTap,
+    this.enabled = true,
     this.iconColor = AppTheme.primary,
   });
 
   @override
   Widget build(BuildContext context) {
     return AnimatedHoverCard(
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       radius: AppTheme.radiusSm,
       border: Border.all(color: AppTheme.divider),
       padding: const EdgeInsets.symmetric(
@@ -87,6 +89,7 @@ class DeviceSwitchCard extends StatelessWidget {
   final IconData icon;
   final bool value;
   final ValueChanged<bool> onChanged;
+  final bool enabled;
 
   const DeviceSwitchCard({
     super.key,
@@ -95,6 +98,7 @@ class DeviceSwitchCard extends StatelessWidget {
     required this.icon,
     required this.value,
     required this.onChanged,
+    this.enabled = true,
   });
 
   @override
@@ -102,7 +106,7 @@ class DeviceSwitchCard extends StatelessWidget {
     final accent = value ? AppTheme.success : AppTheme.textSecondary;
 
     return AnimatedHoverCard(
-      onTap: () => onChanged(!value),
+      onTap: enabled ? () => onChanged(!value) : null,
       color: AppTheme.cardSurface,
       padding: const EdgeInsets.all(AppTheme.space4),
       child: Column(
@@ -116,7 +120,7 @@ class DeviceSwitchCard extends StatelessWidget {
                 scale: 0.85,
                 child: Switch(
                   value: value,
-                  onChanged: onChanged,
+                  onChanged: enabled ? onChanged : null,
                   activeTrackColor: AppTheme.success,
                 ),
               ),
