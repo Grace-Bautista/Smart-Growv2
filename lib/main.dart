@@ -6,7 +6,7 @@ import 'package:smart_grow_code/dashboard/dashboard.dart';
 import 'package:smart_grow_code/dashboard/login_screen.dart';
 import 'package:smart_grow_code/dashboard/admin/user_management_screen.dart';
 import 'package:smart_grow_code/firebase_options.dart';
-import 'package:smart_grow_code/iot_screens/sensor_test_screen.dart';
+import 'package:smart_grow_code/services/alert_store.dart';
 import 'package:smart_grow_code/services/app_settings_service.dart';
 
 void main() async {
