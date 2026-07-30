@@ -5,6 +5,9 @@ import 'package:smart_grow_code/custom_header_button.dart';
 import 'package:smart_grow_code/services/app_settings_service.dart';
 import 'package:smart_grow_code/services/esp32_service.dart';
 import 'package:smart_grow_code/services/user_management_service.dart';
+import 'package:smart_grow_code/screens/sensor_test_screen.dart';
+import 'package:smart_grow_code/auth/auth_service.dart';
+import 'package:smart_grow_code/screens/contact_us_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -107,7 +110,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           sliderTheme: SliderThemeData(
             activeTrackColor: Colors.brown.shade500,
-            inactiveTrackColor: Colors.brown.shade200,
+            inactiveTrackColor: Colors.grey.shade400,
             thumbColor: Colors.brown.shade700,
             overlayColor: Colors.brown.withOpacity(0.2),
           ),
@@ -253,6 +256,125 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           : 'Reset My Password',
                                     ),
                                   ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: screen.height * 0.02),
+
+                          _glassCard(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _title('Tools'),
+                                const SizedBox(height: 10),
+
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: const Icon(Icons.sensors),
+                                  title: Text(
+                                    'Sensor Data Test',
+                                    style: TextStyle(fontSize: bodyFontSize),
+                                  ),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => SensorTestScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+
+                                FutureBuilder(
+                                  future: AuthService.currentAppUser(),
+                                  builder: (context, snapshot) {
+                                    final user = snapshot.data;
+
+                                    if (user == null || !user.isAdmin) {
+                                      return const SizedBox.shrink();
+                                    }
+
+                                    return ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      leading: const Icon(
+                                        Icons.manage_accounts,
+                                      ),
+                                      title: Text(
+                                        'User Management',
+                                        style: TextStyle(
+                                          fontSize: bodyFontSize,
+                                        ),
+                                      ),
+                                      onTap: () {
+                                        Navigator.pushNamed(
+                                          context,
+                                          '/admin/users',
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+
+                                /// CONTACT
+                                ListTile(
+                                  leading: const Icon(Icons.phone),
+                                  title: const Text('Contact Us'),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const ContactUsScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+
+                                /// LOGOUT
+                                ListTile(
+                                  leading: const Icon(
+                                    Icons.logout,
+                                    color: Colors.red,
+                                  ),
+                                  title: const Text(
+                                    'Logout',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  onTap: () async {
+                                    final shouldLogout = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text("Confirm Logout"),
+                                        content: const Text(
+                                          "Are you sure you want to log out?",
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, false),
+                                            child: const Text("Cancel"),
+                                          ),
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, true),
+                                            child: const Text("Logout"),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+
+                                    if (shouldLogout == true) {
+                                      await AuthService.signOut();
+                                      if (!context.mounted) return;
+                                      Navigator.pushNamedAndRemoveUntil(
+                                        context,
+                                        '/',
+                                        (_) => false,
+                                      );
+                                    }
+                                  },
                                 ),
                               ],
                             ),

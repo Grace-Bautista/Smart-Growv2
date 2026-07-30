@@ -64,7 +64,10 @@ class SensorTestScreen extends StatelessWidget {
                   _ValueTile('Humidifier', _state(data.humidifierOn)),
                   _ValueTile('Vent fan', _state(data.ventFanOn)),
                   _ValueTile('Base fan', _state(data.baseFanOn)),
-                  _ValueTile('Refill pump', _refillPumpMode(data.refillPumpMode)),
+                  _ValueTile(
+                    'Refill pump',
+                    _refillPumpMode(data.refillPumpMode),
+                  ),
                   _ValueTile('Loop pump', _state(data.loopPumpOn)),
                   _ValueTile('UV light', _state(data.uvLightOn)),
                 ],
@@ -134,10 +137,7 @@ class _Section extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.all(8),
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              child: Text(title, style: Theme.of(context).textTheme.titleLarge),
             ),
             ...children,
           ],
@@ -157,7 +157,10 @@ class _ValueTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       title: Text(label),
-      trailing: Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+      trailing: Text(
+        value,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
     );
   }
 }

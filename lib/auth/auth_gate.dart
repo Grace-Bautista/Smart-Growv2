@@ -27,7 +27,7 @@ class AuthGate extends StatelessWidget {
           return const LoginScreen();
         }
 
-        return const SmartGrowDashboard();
+        return const DashboardScreen();
       },
     );
   }

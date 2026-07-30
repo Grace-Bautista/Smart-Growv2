@@ -1,502 +1,299 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:smart_grow_code/dashboard/notification/notification_screen.dart';
-import 'package:smart_grow_code/dashboard/sg_custom_scaffold.dart';
-import 'package:smart_grow_code/iot_screens/fan_screen.dart';
-import 'package:smart_grow_code/iot_screens/humidifier_screen.dart';
-import 'package:smart_grow_code/iot_screens/light_screen.dart';
-import 'package:smart_grow_code/iot_screens/temperature_screen.dart';
-import 'package:smart_grow_code/services/esp32_service.dart';
+import '../models/sensor.dart';
+import '../services/alert_store.dart';
+import '../services/esp32_service.dart';
+import '../services/sensor_monitor_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/bottom_navigation.dart';
+import '../widgets/control_panel.dart';
+import '../widgets/device_card.dart';
+import '../widgets/environmental_status.dart';
+import 'notification/notification_screen.dart';
 
-class SmartGrowDashboard extends StatefulWidget {
-  const SmartGrowDashboard({super.key});
+/// The single scrollable SmartGrow dashboard screen.
+///
+/// All mutable state (sliders, switches, dropdown, activation) lives here
+/// and is threaded down into the presentational widgets in `widgets/`,
+/// keeping every child widget stateless/dumb and easy to reuse or test.
+///
+/// Sensor values and the online/offline badge come from
+/// [SensorMonitorService], which polls the ESP32 in the background and
+/// keeps a running log + raises alerts — this screen just displays them.
+class DashboardScreen extends StatefulWidget {
+  const DashboardScreen({super.key});
 
   @override
-  State<SmartGrowDashboard> createState() => _SmartGrowDashboardState();
+  State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _SmartGrowDashboardState extends State<SmartGrowDashboard> {
-  Esp32Snapshot _snapshot = Esp32Snapshot.offline();
-  Timer? _pollTimer;
-  bool _powerBusy = false;
+class _DashboardScreenState extends State<DashboardScreen> {
+  double _temp = 30;
+  double _waterLevel = 30;
+  bool _pumpActive = true;
+  bool _fanActive = true;
+  RefillMode _refillMode = RefillMode.auto;
+  bool _isActivated = false;
+  bool _uvLightOn = true;
+  bool _ventilationOn = false;
+  int _navIndex = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    _refreshSnapshot();
-    _pollTimer = Timer.periodic(
-      const Duration(seconds: 3),
-      (_) => _refreshSnapshot(),
-    );
+  List<Sensor> _sensorsFrom(Esp32Snapshot snap) {
+    return [
+      Sensor(
+        label: 'Humidity',
+        value: snap.humidity != null ? snap.humidity!.toStringAsFixed(0) : '--',
+        unit: '%',
+        icon: Icons.water_drop_outlined,
+        hasInfo: true,
+      ),
+      Sensor(
+        label: 'Temp',
+        value: snap.temperature != null
+            ? snap.temperature!.toStringAsFixed(1)
+            : '--',
+        unit: 'c',
+        icon: Icons.thermostat_outlined,
+        hasInfo: true,
+      ),
+      Sensor(
+        label: 'CO2',
+        value: snap.co2 != null ? snap.co2.toString() : '--',
+        // Was '%' before — CO2 is measured in ppm, not percent.
+        unit: 'ppm',
+        icon: Icons.cloud_outlined,
+        hasInfo: true,
+      ),
+    ];
   }
 
-  Future<void> _refreshSnapshot() async {
-    final snapshot = await Esp32Service.readSnapshot();
-    if (!mounted) return;
-    setState(() => _snapshot = snapshot);
-  }
-
-  Future<void> _toggleSystemPower() async {
-    if (_powerBusy) return;
-
-    if (_snapshot.powerOn) {
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Disable relay outputs?'),
-          content: const Text(
-            'This will turn off only the fan and pump relays. The ESP32, OLED, and sensors will stay powered.',
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(milliseconds: 1200),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppTheme.textPrimary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Turn off'),
-            ),
-          ],
         ),
       );
-
-      if (confirm != true) return;
-    }
-
-    setState(() => _powerBusy = true);
-
-    final ok = _snapshot.powerOn
-        ? await Esp32Service.powerRailOff()
-        : await Esp32Service.powerRailOn();
-
-    if (!mounted) return;
-
-    if (!ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to reach the ESP32 right now.'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    }
-
-    await _refreshSnapshot();
-
-    if (mounted) {
-      setState(() => _powerBusy = false);
-    }
   }
 
-  @override
-  void dispose() {
-    _pollTimer?.cancel();
-    super.dispose();
+  Future<void> _forceRefresh() async {
+    _showSnack('Checking ESP32...');
+    await SensorMonitorService.refreshNow();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      drawer: Drawer(child: AppDrawer(onClose: () => Navigator.pop(context))),
-      appBar: AppBar(
-        title: const Text(
-          'Smart Grow',
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.6,
+    return ValueListenableBuilder<Esp32Snapshot>(
+      valueListenable: SensorMonitorService.latest,
+      builder: (context, snapshot, _) {
+        return Scaffold(
+          extendBodyBehindAppBar: false,
+          body: Column(
+            children: [
+              Expanded(
+                child: CustomScrollView(
+                  slivers: [
+                    _buildHeaderSliver(context),
+                    SliverToBoxAdapter(child: _buildBody(context, snapshot)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          bottomNavigationBar: SmartGrowBottomNav(
+            selectedIndex: _navIndex,
+            onTap: (i) => setState(() => _navIndex = i),
+            onPowerTap: _forceRefresh,
+          ),
+        );
+      },
+    );
+  }
+
+  /// Notifications screen.
+  Widget _buildHeaderSliver(BuildContext context) {
+    return SliverAppBar(
+      pinned: true,
+      floating: true,
+      elevation: 0,
+      backgroundColor: AppTheme.primary,
+      automaticallyImplyLeading: false,
+      toolbarHeight: 64,
+      flexibleSpace: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppTheme.primary, AppTheme.primaryLight],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
         ),
-        centerTitle: true,
-        backgroundColor: const Color(0xFFB68C63),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const NotificationScreen()),
+      ),
+      title: Text(
+        'SmartGrow',
+        style: Theme.of(
+          context,
+        ).textTheme.headlineSmall?.copyWith(color: Colors.white, fontSize: 22),
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: AppTheme.space4),
+          child: ValueListenableBuilder<int>(
+            valueListenable: AlertStore.unreadCount,
+            builder: (context, unread, _) {
+              return InkResponse(
+                radius: 24,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NotificationScreen()),
+                ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(
+                      Icons.notifications_none_rounded,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                    if (unread > 0)
+                      Positioned(
+                        right: -4,
+                        top: -4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.danger,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: AppTheme.primary,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Text(
+                            unread > 9 ? '9+' : '$unread',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               );
             },
           ),
-        ],
-      ),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/background-image.jpg',
-              fit: BoxFit.cover,
-            ),
-          ),
-          SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final width = constraints.maxWidth;
-                final crossAxisCount = width < 600 ? 2 : 4;
-                final padding = (width * 0.04).clamp(12.0, 24.0);
-                final spacing = (width * 0.03).clamp(10.0, 20.0);
-
-                return SingleChildScrollView(
-                  padding: EdgeInsets.all(padding),
-                  child: Column(
-                    children: [
-                      WeatherCard(snapshot: _snapshot),
-                      SizedBox(height: spacing),
-                      GridView.count(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisCount: crossAxisCount,
-                        crossAxisSpacing: spacing,
-                        mainAxisSpacing: spacing,
-                        childAspectRatio: width < 420 ? 0.95 : 1.0,
-                        children: [
-                          FeatureCard(
-                            title: 'Humidifier',
-                            icon: Icons.water_drop,
-                            color: Colors.blue,
-                            isActive: _snapshot.pumpOn,
-                            description:
-                                'Monitors humidity and controls the refill pump for the humidifier tank.',
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const HumidityScreen(),
-                              ),
-                            ),
-                          ),
-                          FeatureCard(
-                            title: 'Temperature',
-                            icon: Icons.thermostat,
-                            color: Colors.red,
-                            isActive: _snapshot.temperature != null,
-                            description:
-                                'Shows the live SCD40 temperature reading and its control state.',
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const TemperatureScreen(),
-                              ),
-                            ),
-                          ),
-                          FeatureCard(
-                            title: 'UV Light',
-                            icon: Icons.lightbulb,
-                            color: Colors.orange,
-                            isActive: _snapshot.uvOn,
-                            description:
-                                'Controls the UV disinfection lamp connected to the ESP32.',
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const LightScreen(),
-                              ),
-                            ),
-                          ),
-                          FeatureCard(
-                            title: 'Fan / CO2',
-                            icon: Icons.air,
-                            color: Colors.green,
-                            isActive: _snapshot.fanOn,
-                            description:
-                                'Controls airflow manually or automatically based on CO2 and temperature.',
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const FanScreen(),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: spacing),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _powerBusy
-                              ? null
-                              : () {
-                                  _toggleSystemPower();
-                                },
-                          icon: Icon(
-                            _snapshot.powerOn
-                                ? Icons.power_settings_new
-                                : Icons.power_off,
-                            color: Colors.white,
-                          ),
-                          label: Text(
-                            _snapshot.powerOn
-                                ? 'RELAY OUTPUTS ENABLED'
-                                : 'RELAY OUTPUTS DISABLED',
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _snapshot.powerOn
-                                ? Colors.green
-                                : Colors.red,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class WeatherCard extends StatelessWidget {
-  const WeatherCard({super.key, required this.snapshot});
-
-  final Esp32Snapshot snapshot;
-
-  @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(
-        vertical: width * 0.06,
-        horizontal: width * 0.05,
-      ),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(25),
-        color: Colors.white.withOpacity(0.95),
-        border: Border.all(color: Colors.black12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.12),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.cloud, size: 40, color: Colors.black87),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'ENVIRONMENT STATUS',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-              _EspStatusChip(connected: snapshot.connected),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            alignment: WrapAlignment.center,
-            children: [
-              _MetricChip(
-                label: 'Temp',
-                value: snapshot.temperature == null
-                    ? '--'
-                    : '${snapshot.temperature!.toStringAsFixed(1)} C',
-              ),
-              _MetricChip(
-                label: 'Humidity',
-                value: snapshot.humidity == null
-                    ? '--'
-                    : '${snapshot.humidity!.toStringAsFixed(0)}%',
-              ),
-              _MetricChip(
-                label: 'CO2',
-                value: snapshot.co2 == null ? '--' : '${snapshot.co2} ppm',
-              ),
-              _MetricChip(
-                label: 'Water',
-                value: snapshot.waterPresent ? 'Detected' : 'Empty',
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MetricChip extends StatelessWidget {
-  const _MetricChip({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5EFE6),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.black54,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EspStatusChip extends StatelessWidget {
-  const _EspStatusChip({required this.connected});
-
-  final bool connected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: connected ? Colors.green : Colors.red,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        connected ? 'ESP32 ONLINE' : 'ESP32 OFFLINE',
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
         ),
-      ),
+      ],
     );
   }
-}
 
-class FeatureCard extends StatelessWidget {
-  const FeatureCard({
-    super.key,
-    required this.title,
-    required this.icon,
-    required this.color,
-    required this.isActive,
-    required this.description,
-    required this.onTap,
-  });
+  /// Main scrollable content, constrained to a comfortable reading width
+  /// on large/desktop/web viewports and centred horizontally.
+  Widget _buildBody(BuildContext context, Esp32Snapshot snapshot) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final hPad = AppTheme.adaptivePadding(width);
+        final maxContentWidth = width >= 900 ? 720.0 : double.infinity;
+        final isWide = width >= 700;
 
-  final String title;
-  final IconData icon;
-  final Color color;
-  final bool isActive;
-  final String description;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final iconSize = (width * 0.08).clamp(28.0, 46.0);
-    final textSize = (width * 0.035).clamp(12.0, 18.0);
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(22),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          color: Colors.white.withOpacity(0.95),
-          border: Border.all(
-            color: isActive ? color : Colors.grey.shade300,
-            width: 2,
-          ),
-        ),
-        child: Stack(
-          children: [
-            Align(
-              alignment: Alignment.topRight,
-              child: IconButton(
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.help_outline, size: 18),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: Text(title),
-                      content: Text(description),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Close'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+        return Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxContentWidth),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                hPad,
+                AppTheme.space5,
+                hPad,
+                AppTheme.space7,
               ),
-            ),
-            Center(
               child: Column(
-                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(icon, size: iconSize, color: color),
-                  const SizedBox(height: 12),
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: textSize,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  EnvironmentStatus(
+                    isOnline: snapshot.connected,
+                    sensors: _sensorsFrom(snapshot),
+                    onToggleOnline: _forceRefresh,
+                    onSensorTap: (s) =>
+                        _showSnack('${s.label}: ${s.value}${s.unit}'),
                   ),
+                  const SizedBox(height: AppTheme.space5),
+                  const SectionTitle(title: 'Control Panel'),
+                  const SizedBox(height: AppTheme.space5),
+                  ControlPanel(
+                    temp: _temp,
+                    waterLevel: _waterLevel,
+                    pumpActive: _pumpActive,
+                    fanActive: _fanActive,
+                    refillMode: _refillMode,
+                    isActivated: _isActivated,
+                    onTempChanged: (v) => setState(() => _temp = v),
+                    onWaterLevelChanged: (v) => setState(() => _waterLevel = v),
+                    onTogglePump: () =>
+                        setState(() => _pumpActive = !_pumpActive),
+                    onToggleFan: () => setState(() => _fanActive = !_fanActive),
+                    onRefillModeChanged: (m) => setState(() => _refillMode = m),
+                    onActivate: () {
+                      setState(() => _isActivated = !_isActivated);
+                      _showSnack(
+                        _isActivated
+                            ? 'Humidifier activated'
+                            : 'Humidifier stopped',
+                      );
+                    },
+                  ),
+                  const SizedBox(height: AppTheme.space5),
+                  _buildDeviceRow(isWide),
                 ],
               ),
             ),
-            Align(
-              alignment: Alignment.bottomRight,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: isActive ? Colors.green : Colors.red,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Text(
-                  isActive ? 'ACTIVE' : 'INACTIVE',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// UV Light and Ventilation cards. Side-by-side on any reasonably wide
+  /// screen, stacked is on very narrow ones via [Wrap] to avoid overflow.
+  Widget _buildDeviceRow(bool isWide) {
+    final uvCard = DeviceSwitchCard(
+      title: 'UV Light',
+      description: 'Controls the UV disinfection lamp connected to the ESP32.',
+      icon: Icons.wb_sunny_outlined,
+      value: _uvLightOn,
+      onChanged: (v) {
+        setState(() => _uvLightOn = v);
+        _showSnack('UV Light ${v ? 'on' : 'off'}');
+      },
+    );
+    final ventCard = DeviceSwitchCard(
+      title: 'Ventilation',
+      description: 'Controls the circulation of fresh and exhaust air.',
+      icon: Icons.air_rounded,
+      value: _ventilationOn,
+      onChanged: (v) {
+        setState(() => _ventilationOn = v);
+        _showSnack('Ventilation ${v ? 'on' : 'off'}');
+      },
+    );
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: uvCard),
+        const SizedBox(width: AppTheme.space3),
+        Expanded(child: ventCard),
+      ],
     );
   }
 }

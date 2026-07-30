@@ -5,19 +5,19 @@ import '../models/system_event_log.dart';
 
 enum HistoryCategory { all, environment, events }
 
-const HistorySection({
-  super.key,
-  required this.sensors,
-  required this.events,
-  required this.startDate,
-  required this.endDate,
-});
+class HistorySection extends StatefulWidget {
+  const HistorySection({
+    super.key,
+    required this.sensors,
+    required this.events,
+    required this.startDate,
+    required this.endDate,
+  });
 
-final List<SensorHistoryRecord> sensors;
-final List<SystemEventLog> events;
-final DateTime startDate;
-final DateTime endDate;
-
+  final List<SensorHistoryRecord> sensors;
+  final List<SystemEventLog> events;
+  final DateTime startDate;
+  final DateTime endDate;
   @override
   State<HistorySection> createState() => _HistorySectionState();
 }
@@ -25,41 +25,31 @@ final DateTime endDate;
 class _HistorySectionState extends State<HistorySection> {
   HistoryCategory category = HistoryCategory.all;
 
-  Future<void> _pick() async {
-    final result = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-      initialDateRange: customRange,
-    );
-    if (result != null)
-      setState(() {
-        customRange = result;
-        range = 'Custom';
-      });
-  }
-
   @override
   Widget build(BuildContext context) {
     final rows = <_Row>[];
-    if (category != HistoryCategory.events)
+    if (category != HistoryCategory.events) {
       rows.addAll(
         widget.sensors
             .where(
               (x) =>
-                  !x.timestamp.isBefore(_start) && !x.timestamp.isAfter(_end),
+                  !x.timestamp.isBefore(widget.startDate) &&
+                  !x.timestamp.isAfter(widget.endDate),
             )
             .map(_Row.sensor),
       );
-    if (category != HistoryCategory.environment)
+    }
+    if (category != HistoryCategory.environment) {
       rows.addAll(
         widget.events
             .where(
               (x) =>
-                  !x.timestamp.isBefore(_start) && !x.timestamp.isAfter(_end),
+                  !x.timestamp.isBefore(widget.startDate) &&
+                  !x.timestamp.isAfter(widget.endDate),
             )
             .map(_Row.event),
       );
+    }
     rows.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     final groups = <DateTime, List<_Row>>{};
     for (final row in rows) {
@@ -73,7 +63,6 @@ class _HistorySectionState extends State<HistorySection> {
     return SingleChildScrollView(
       key: const ValueKey('history'),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'History Logs',
@@ -83,25 +72,6 @@ class _HistorySectionState extends State<HistorySection> {
           ),
           const SizedBox(height: 4),
 
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: ['Today', '7 Days', '30 Days', 'Custom']
-                .map(
-                  (x) => ChoiceChip(
-                    label: Text(x),
-                    selected: range == x,
-                    onSelected: (_) {
-                      if (x == 'Custom') {
-                        _pick();
-                      } else {
-                        setState(() => range = x);
-                      }
-                    },
-                  ),
-                )
-                .toList(),
-          ),
           const SizedBox(height: 10),
           _HistoryCategorySelector(
             selected: category,
