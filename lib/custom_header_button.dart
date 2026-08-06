@@ -4,11 +4,7 @@ class CustomHeaderButton extends StatelessWidget {
   final String title;
   final VoidCallback? onBack;
 
-  const CustomHeaderButton({
-    super.key,
-    required this.title,
-    this.onBack,
-  });
+  const CustomHeaderButton({super.key, required this.title, this.onBack});
 
   @override
   Widget build(BuildContext context) {

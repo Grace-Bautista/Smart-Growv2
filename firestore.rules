@@ -16,6 +16,24 @@ service cloud.firestore {
         && userDoc(request.auth.uid).data.status == 'active';
     }
 
+    function isActiveUser() {
+      return signedIn() && userDoc(request.auth.uid).data.status == 'active';
+    }
+
+    match /devices/{deviceId}/sensorHistory/{recordId} {
+      allow read: if isActiveUser();
+      allow create, update, delete: if false;
+    }
+
+    match /devices/{deviceId}/systemEvents/{eventId} {
+      allow read: if isActiveUser();
+      allow create, update, delete: if false;
+    }
+
+    match /devices/{deviceId}/historyMetadata/{metadataId} {
+      allow read, write: if false;
+    }
+
     match /users/{uid} {
       allow get: if signedIn() && (request.auth.uid == uid || isActiveAdmin());
       allow list: if isActiveAdmin();

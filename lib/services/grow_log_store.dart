@@ -79,7 +79,9 @@ class GrowLogStore {
 
   static List<Map<String, dynamic>> readingsForDate(DateTime date) {
     return _all()
-        .where((r) => _isSameDate(DateTime.parse(r['timestamp'] as String), date))
+        .where(
+          (r) => _isSameDate(DateTime.parse(r['timestamp'] as String), date),
+        )
         .toList();
   }
 
@@ -101,8 +103,8 @@ class GrowLogStore {
       'totalReadings': readings.length,
       'humidifierOnMinutes':
           (countWhere((r) => r['pumpOn'] == true) * intervalMinutes).round(),
-      'fanOnMinutes':
-          (countWhere((r) => r['fanOn'] == true) * intervalMinutes).round(),
+      'fanOnMinutes': (countWhere((r) => r['fanOn'] == true) * intervalMinutes)
+          .round(),
       'sensorOfflineCount': countWhere((r) => r['sensorOnline'] == false),
       'deviceOfflineCount': countWhere((r) => r['connected'] == false),
     };
@@ -123,8 +125,11 @@ class GrowLogStore {
     }
 
     for (var i = days - 1; i >= 0; i--) {
-      final day =
-          DateTime(now.year, now.month, now.day).subtract(Duration(days: i));
+      final day = DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).subtract(Duration(days: i));
       final readings = readingsForDate(day);
 
       result.add({

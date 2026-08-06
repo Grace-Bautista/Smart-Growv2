@@ -7,11 +7,7 @@ class CustomPowerButton extends StatelessWidget {
   final String title;
   final VoidCallback? onTap;
 
-  const CustomPowerButton({
-    super.key,
-    required this.title,
-    this.onTap,
-  });
+  const CustomPowerButton({super.key, required this.title, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -30,10 +26,7 @@ class CustomPowerButton extends StatelessWidget {
         onTap: onTap,
         child: Container(
           width: double.infinity,
-          constraints: const BoxConstraints(
-            minHeight: 50,
-            maxWidth: 600,
-          ),
+          constraints: const BoxConstraints(minHeight: 50, maxWidth: 600),
           padding: EdgeInsets.symmetric(vertical: base * 0.7),
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -94,18 +87,14 @@ class ButtonUtils {
     required BuildContext context,
     required String title,
     required VoidCallback onTap,
-    double horizontalMargin = 0, // full width by default 
+    double horizontalMargin = 0, // full width by default
     double bottomMargin = 20,
   }) {
-    
     return Align(
       alignment: Alignment.bottomCenter,
       child: Padding(
         padding: const EdgeInsets.only(bottom: 20),
-        child: CustomPowerButton(
-          title: title,
-          onTap: onTap,
-        ),
+        child: CustomPowerButton(title: title, onTap: onTap),
       ),
     );
   }

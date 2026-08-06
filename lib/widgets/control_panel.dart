@@ -65,9 +65,9 @@ class ControlPanel extends StatelessWidget {
           Text(
             'Humidifier',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontSize: 17,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontSize: 17),
           ),
           const SizedBox(height: AppTheme.space3),
           const Divider(color: AppTheme.divider),
@@ -76,9 +76,7 @@ class ControlPanel extends StatelessWidget {
           const SizedBox(height: AppTheme.space4),
 
           // ---- Sliders ---------------------------------------------------
-          TemperatureIndicator(
-            temperature:temp,
-          ),
+          TemperatureIndicator(temperature: temp),
 
           const SizedBox(height: AppTheme.space4),
           SliderTile(
@@ -88,7 +86,9 @@ class ControlPanel extends StatelessWidget {
             min: 0,
             max: 100,
             onChanged: onWaterLevelChanged,
-            warning: _isCritical ? 'Critical water level. Please refill.' : null,
+            warning: _isCritical
+                ? 'Critical water level. Please refill.'
+                : null,
           ),
           const SizedBox(height: AppTheme.space5),
 
@@ -127,12 +127,17 @@ class ControlPanel extends StatelessWidget {
           // ---- Refill water dropdown --------------------------------------
           _RefillDropdown(
             mode: refillMode,
-            onChanged: controlsEnabled && !refillPending ? onRefillModeChanged : null,
+            onChanged: controlsEnabled && !refillPending
+                ? onRefillModeChanged
+                : null,
           ),
           const SizedBox(height: AppTheme.space4),
 
           // ---- Activate button ---------------------------------------------
-          _ActivateButton(isActivated: isActivated, onTap: controlsEnabled && !humidifierPending ? onActivate : null),
+          _ActivateButton(
+            isActivated: isActivated,
+            onTap: controlsEnabled && !humidifierPending ? onActivate : null,
+          ),
         ],
       ),
     );
@@ -166,10 +171,7 @@ class _RefillDropdown extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           items: [
             for (final m in RefillMode.values)
-              DropdownMenuItem(
-                value: m,
-                child: Text(m.label),
-              ),
+              DropdownMenuItem(value: m, child: Text(m.label)),
           ],
           selectedItemBuilder: (context) {
             return [
@@ -236,8 +238,9 @@ class _ActivateButtonState extends State<_ActivateButton> {
             ),
             boxShadow: [
               BoxShadow(
-                color: (widget.isActivated ? AppTheme.success : AppTheme.primary)
-                    .withOpacity(_hovering ? 0.45 : 0.3),
+                color:
+                    (widget.isActivated ? AppTheme.success : AppTheme.primary)
+                        .withOpacity(_hovering ? 0.45 : 0.3),
                 blurRadius: _hovering ? 20 : 14,
                 offset: const Offset(0, 6),
               ),
@@ -251,7 +254,9 @@ class _ActivateButtonState extends State<_ActivateButton> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  widget.isActivated ? Icons.check_circle : Icons.power_settings_new,
+                  widget.isActivated
+                      ? Icons.check_circle
+                      : Icons.power_settings_new,
                   color: Colors.white,
                   size: 20,
                 ),

@@ -443,16 +443,15 @@ class _GuideCardState extends State<GuideCard> {
                     children: [
                       Text(
                         widget.article.title,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         widget.article.subtitle,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.black54,
-                            ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.copyWith(color: Colors.black54),
                       ),
                     ],
                   ),
@@ -485,12 +484,14 @@ class GuideArticlePage extends StatelessWidget {
           Text(
             article.subtitle,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.brown.shade700,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: Colors.brown.shade700,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 16),
-          ...article.sections.map((section) => _GuideSectionCard(section: section)),
+          ...article.sections.map(
+            (section) => _GuideSectionCard(section: section),
+          ),
         ],
       ),
     );
@@ -513,18 +514,15 @@ class _GuideSectionCard extends StatelessWidget {
           children: [
             Text(
               section.heading,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             ...section.paragraphs.map(
               (paragraph) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: Text(
-                  paragraph,
-                  style: const TextStyle(height: 1.5),
-                ),
+                child: Text(paragraph, style: const TextStyle(height: 1.5)),
               ),
             ),
             ...section.bullets.map(
@@ -543,10 +541,7 @@ class _GuideSectionCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(
-                        bullet,
-                        style: const TextStyle(height: 1.45),
-                      ),
+                      child: Text(bullet, style: const TextStyle(height: 1.45)),
                     ),
                   ],
                 ),

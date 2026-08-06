@@ -54,7 +54,11 @@ DateTimeRange logRangeFor(LogDateRange range, {DateTimeRange? customRange}) {
     LogDateRange.custom => 0,
   };
   return DateTimeRange(
-    start: DateTime(now.year, now.month, now.day).subtract(Duration(days: days)),
+    start: DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(Duration(days: days)),
     end: end,
   );
 }

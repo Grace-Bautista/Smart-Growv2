@@ -10,7 +10,9 @@ class SensorReadingStatus {
 
   bool isFresh(DateTime now, {Duration maxAge = const Duration(seconds: 45)}) {
     final timestamp = updatedAt;
-    return valid == true && timestamp != null && now.difference(timestamp) <= maxAge;
+    return valid == true &&
+        timestamp != null &&
+        now.difference(timestamp) <= maxAge;
   }
 }
 
@@ -64,7 +66,8 @@ class SensorData {
 
   bool isDeviceAvailable(DateTime now) {
     final heartbeat = lastHeartbeat;
-    return heartbeat != null && now.difference(heartbeat) <= const Duration(seconds: 45);
+    return heartbeat != null &&
+        now.difference(heartbeat) <= const Duration(seconds: 45);
   }
 
   factory SensorData.fromRealtimeValue(Object? value) {
@@ -101,24 +104,38 @@ class SensorData {
 
   static SensorReadingStatus _status(Object? value) {
     final status = _asMap(value);
-    return SensorReadingStatus(valid: _asBool(status['valid']), updatedAt: _asDateTime(status['updatedAt']));
+    return SensorReadingStatus(
+      valid: _asBool(status['valid']),
+      updatedAt: _asDateTime(status['updatedAt']),
+    );
   }
 
-  static Map<Object?, Object?> _asMap(Object? value) => value is Map ? Map<Object?, Object?>.from(value) : const {};
-  static double? _asDouble(Object? value) => value is num ? value.toDouble() : double.tryParse(value?.toString() ?? '');
+  static Map<Object?, Object?> _asMap(Object? value) =>
+      value is Map ? Map<Object?, Object?>.from(value) : const {};
+  static double? _asDouble(Object? value) => value is num
+      ? value.toDouble()
+      : double.tryParse(value?.toString() ?? '');
   static bool? _asBool(Object? value) {
     if (value is bool) return value;
     if (value is num) return value != 0;
     switch (value?.toString().toLowerCase()) {
-      case 'true': case '1': return true;
-      case 'false': case '0': return false;
-      default: return null;
+      case 'true':
+      case '1':
+        return true;
+      case 'false':
+      case '0':
+        return false;
+      default:
+        return null;
     }
   }
-  static DateTime? _asDateTime(Object? value) => value is num ? DateTime.fromMillisecondsSinceEpoch(value.toInt()) : null;
-  static AutomationMode _automationMode(Object? value) => switch (value?.toString().toLowerCase()) {
-    'automatic' => AutomationMode.automatic,
-    'manual' => AutomationMode.manual,
-    _ => AutomationMode.unknown,
-  };
+
+  static DateTime? _asDateTime(Object? value) =>
+      value is num ? DateTime.fromMillisecondsSinceEpoch(value.toInt()) : null;
+  static AutomationMode _automationMode(Object? value) =>
+      switch (value?.toString().toLowerCase()) {
+        'automatic' => AutomationMode.automatic,
+        'manual' => AutomationMode.manual,
+        _ => AutomationMode.unknown,
+      };
 }

@@ -36,9 +36,9 @@ class EnvironmentStatus extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Environment Status',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontSize: 19,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.headlineSmall?.copyWith(fontSize: 19),
                 ),
               ),
               const SizedBox(width: AppTheme.space3),
@@ -51,7 +51,8 @@ class EnvironmentStatus extends StatelessWidget {
               // Wrap keeps sensor tiles from overflowing on very narrow
               // screens (e.g. a phone rotated, or a resized web window)
               // while still filling the row nicely on wider layouts.
-              final tileWidth = (constraints.maxWidth - AppTheme.space3 * 2) / 3;
+              final tileWidth =
+                  (constraints.maxWidth - AppTheme.space3 * 2) / 3;
               final useWrap = tileWidth < 96;
 
               if (!useWrap) {

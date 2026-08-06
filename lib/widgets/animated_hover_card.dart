@@ -66,8 +66,9 @@ class _AnimatedHoverCardState extends State<AnimatedHoverCard> {
               color: widget.color ?? AppTheme.cardSurface,
               borderRadius: BorderRadius.circular(widget.radius),
               border: widget.border,
-              boxShadow:
-                  _hovering ? AppTheme.hoverShadow() : AppTheme.softShadow(),
+              boxShadow: _hovering
+                  ? AppTheme.hoverShadow()
+                  : AppTheme.softShadow(),
             ),
             child: widget.child,
           ),

@@ -3,11 +3,7 @@ import 'package:smart_grow_code/auth/app_user.dart';
 import 'package:smart_grow_code/auth/auth_service.dart';
 
 class RoleGuard extends StatelessWidget {
-  const RoleGuard({
-    super.key,
-    required this.allow,
-    required this.child,
-  });
+  const RoleGuard({super.key, required this.allow, required this.child});
 
   final bool Function(AppUser user) allow;
   final Widget child;

@@ -137,7 +137,6 @@ class _HarvestLogWidgetState extends State<HarvestLogWidget> {
                     },
                   ),
                 ],
-
               ),
             ),
           ),

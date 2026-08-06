@@ -35,21 +35,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final current = AppSettingsService.current;
     headerFontSize = current.headerFontSize;
     bodyFontSize = current.bodyFontSize;
-    _deviceSubscription = SensorService.instance.watchLiveData().listen(_applyDeviceStatus);
+    _deviceSubscription = SensorService.instance.watchLiveData().listen(
+      _applyDeviceStatus,
+    );
   }
 
   void _applyDeviceStatus(SensorData data) {
     if (!mounted) return;
     setState(() {
       deviceConnected = data.isDeviceAvailable(DateTime.now());
-      deviceOn = (data.humidifierOn ?? false) || (data.ventFanOn ?? false) ||
-          (data.baseFanOn ?? false) || (data.refillPumpOn ?? false) ||
-          (data.loopPumpOn ?? false) || (data.uvLightOn ?? false);
+      deviceOn =
+          (data.humidifierOn ?? false) ||
+          (data.ventFanOn ?? false) ||
+          (data.baseFanOn ?? false) ||
+          (data.refillPumpOn ?? false) ||
+          (data.loopPumpOn ?? false) ||
+          (data.uvLightOn ?? false);
     });
   }
 
   @override
-  void dispose() { _deviceSubscription?.cancel(); super.dispose(); }
+  void dispose() {
+    _deviceSubscription?.cancel();
+    super.dispose();
+  }
 
   Future<void> _saveAndClose() async {
     if (_saving) return;
@@ -401,7 +410,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   String _getStatusText() {
     if (!deviceConnected) return 'ESP32 not connected';
-    return deviceOn ? 'One or more controller outputs are ON' : 'Controller outputs are OFF';
+    return deviceOn
+        ? 'One or more controller outputs are ON'
+        : 'Controller outputs are OFF';
   }
 
   Widget _statusIndicator() {

@@ -4,7 +4,7 @@ import 'package:smart_grow_code/harvestlogs_screen.dart';
 import 'package:smart_grow_code/logs/models/sensor_history_record.dart';
 import 'package:smart_grow_code/logs/models/system_event_log.dart';
 import 'package:smart_grow_code/logs/repositories/logbook_repository.dart';
-import 'package:smart_grow_code/logs/repositories/mock_logbook_repository.dart';
+import 'package:smart_grow_code/logs/repositories/firestore_logbook_repository.dart';
 import 'package:smart_grow_code/logs/widgets/analytics_section.dart';
 import 'package:smart_grow_code/logs/widgets/history_section.dart';
 import 'package:smart_grow_code/logs/widgets/overview_section.dart';
@@ -29,7 +29,7 @@ class _LogBookScreenState extends State<LogBookScreen> {
   ];
 
   late final LogBookRepository _repository;
-  late final Future<_LogData> _logData;
+  late Future<_LogData> _logData;
 
   int _selectedSection = 0;
   String _selectedRange = '7 Days';
@@ -74,6 +74,7 @@ class _LogBookScreenState extends State<LogBookScreen> {
     setState(() {
       _customRange = result;
       _selectedRange = 'Custom';
+      _logData = _loadLogData();
     });
   }
 
@@ -81,20 +82,21 @@ class _LogBookScreenState extends State<LogBookScreen> {
   void initState() {
     super.initState();
 
-    _repository = widget.repository ?? MockLogBookRepository();
+    _repository = widget.repository ?? FirestoreLogBookRepository();
     _logData = _loadLogData();
   }
 
   Future<_LogData> _loadLogData() async {
-    // Temporary mock-data range.
-    // This will eventually be controlled by the history/analytics
-    // date filters and Firebase queries.
-    final start = DateTime(2026, 7, 1);
-    final end = DateTime(2026, 7, 31, 23, 59, 59);
-
-    final sensors = await _repository.getSensorHistory(start: start, end: end);
-
-    final events = await _repository.getSystemEvents(start: start, end: end);
+    final sensors = await _repository.getSensorHistory(
+      deviceId: 'smartGrow01',
+      start: _startDate,
+      end: _endDate,
+    );
+    final events = await _repository.getSystemEvents(
+      deviceId: 'smartGrow01',
+      start: _startDate,
+      end: _endDate,
+    );
 
     return _LogData(sensors: sensors, events: events);
   }
@@ -127,6 +129,7 @@ class _LogBookScreenState extends State<LogBookScreen> {
 
                           setState(() {
                             _selectedRange = value;
+                            _logData = _loadLogData();
                           });
                         },
                       ),
@@ -377,6 +380,12 @@ class _LogBookScreenState extends State<LogBookScreen> {
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF373431),
               ),
+            ),
+            const SizedBox(height: 14),
+            FilledButton.icon(
+              onPressed: () => setState(() => _logData = _loadLogData()),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
             ),
 
             const SizedBox(height: 8),

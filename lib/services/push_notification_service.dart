@@ -32,18 +32,23 @@ class PushNotificationService {
 
     await _plugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.requestNotificationsPermission();
 
     await _plugin
-      .resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin>()
-      ?.requestPermissions(alert: true, badge: true, sound: true);
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
 
     _initialized = true;
   }
 
-  static Future<void> show({required String title, required String body}) async {
+  static Future<void> show({
+    required String title,
+    required String body,
+  }) async {
     if (!_initialized) return;
 
     const androidDetails = AndroidNotificationDetails(

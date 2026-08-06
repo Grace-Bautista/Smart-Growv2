@@ -68,14 +68,16 @@ class AlertStore {
     if (box == null) return [];
 
     final entries = box.toMap().entries.toList()
-      ..sort((a, b) => (b.value['timestamp'] as String)
-          .compareTo(a.value['timestamp'] as String));
+      ..sort(
+        (a, b) => (b.value['timestamp'] as String).compareTo(
+          a.value['timestamp'] as String,
+        ),
+      );
 
     return entries
-        .map((e) => {
-              ...Map<String, dynamic>.from(e.value as Map),
-              '_key': e.key,
-            })
+        .map(
+          (e) => {...Map<String, dynamic>.from(e.value as Map), '_key': e.key},
+        )
         .toList();
   }
 
@@ -108,8 +110,9 @@ class AlertStore {
       unreadCount.value = 0;
       return;
     }
-    unreadCount.value =
-        box.values.where((v) => (v as Map)['read'] != true).length;
+    unreadCount.value = box.values
+        .where((v) => (v as Map)['read'] != true)
+        .length;
   }
 
   /// Buckets already-sorted (newest first) alerts into Today / Yesterday /
