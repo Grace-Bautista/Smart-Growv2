@@ -27,7 +27,7 @@ class DeviceIconTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedHoverCard(
-      onTap: enabled ? onTap : null,
+      onTap: onTap,
       radius: AppTheme.radiusSm,
       border: Border.all(color: AppTheme.divider),
       padding: const EdgeInsets.symmetric(
@@ -37,32 +37,30 @@ class DeviceIconTile extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          /// Help button
-          Align(
-            alignment: Alignment.topRight,
-            child: IconButton(
-              visualDensity: VisualDensity.compact,
-              icon: const Icon(Icons.help_outline, size: 18),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title: Text(title),
-                    content: Text(description),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text("Close"),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          Align(
-            alignment: Alignment.topLeft,
-            child: _StatusDot(isActive: isActive),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _StatusDot(isActive: isActive),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.help_outline, size: 18),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: Text(title),
+                      content: Text(description),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Close"),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
           const SizedBox(height: AppTheme.space2),
           Icon(icon, size: 30, color: iconColor),
@@ -106,7 +104,7 @@ class DeviceSwitchCard extends StatelessWidget {
     final accent = value ? AppTheme.success : AppTheme.textSecondary;
 
     return AnimatedHoverCard(
-      onTap: enabled ? () => onChanged(!value) : null,
+      onTap: () => onChanged(!value),
       color: AppTheme.cardSurface,
       padding: const EdgeInsets.all(AppTheme.space4),
       child: Column(
@@ -120,7 +118,7 @@ class DeviceSwitchCard extends StatelessWidget {
                 scale: 0.85,
                 child: Switch(
                   value: value,
-                  onChanged: enabled ? onChanged : null,
+                  onChanged: onChanged,
                   activeTrackColor: AppTheme.success,
                 ),
               ),

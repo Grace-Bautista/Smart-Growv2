@@ -19,14 +19,14 @@ class SensorCard extends StatelessWidget {
     String _sensorDescription(String label) {
       switch (label.toLowerCase()) {
         case 'temperature':
-          return 'Measures the current air temperature inside the greenhouse.';
+          return 'Measures the current air temperature inside the mushroom house.';
 
         case 'humidity':
-          return 'Measures the relative humidity level of the air.';
+          return 'Measures the relative humidity level of the air in the mushroom house.';
 
         case 'co₂':
         case 'co2':
-          return 'Measures the concentration of carbon dioxide in the greenhouse.';
+          return 'Measures the concentration of carbon dioxide in the mushroom house.';
 
         default:
           return 'Displays the current reading of the $label sensor.';
