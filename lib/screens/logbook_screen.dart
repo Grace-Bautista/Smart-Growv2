@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:smart_grow_code/custom_header_button.dart';
 import 'package:smart_grow_code/harvestlogs_screen.dart';
 import 'package:smart_grow_code/logs/models/sensor_history_record.dart';
@@ -87,18 +88,43 @@ class _LogBookScreenState extends State<LogBookScreen> {
   }
 
   Future<_LogData> _loadLogData() async {
-    final sensors = await _repository.getSensorHistory(
-      deviceId: 'smartGrow01',
-      start: _startDate,
-      end: _endDate,
-    );
-    final events = await _repository.getSystemEvents(
-      deviceId: 'smartGrow01',
-      start: _startDate,
-      end: _endDate,
-    );
+    try {
+      final sensors = await _repository.getSensorHistory(
+        deviceId: 'smartGrow01',
+        start: _startDate,
+        end: _endDate,
+      );
 
-    return _LogData(sensors: sensors, events: events);
+      final events = await _repository.getSystemEvents(
+        deviceId: 'smartGrow01',
+        start: _startDate,
+        end: _endDate,
+      );
+
+      return _LogData(sensors: sensors, events: events);
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('Logbook load failed: $error');
+        debugPrintStack(label: 'Logbook stack trace', stackTrace: stackTrace);
+      }
+
+      return _LogData(sensors: const [], events: const [], error: error);
+    }
+  }
+
+  String _safeErrorDetail(Object error) {
+    final message = error.toString().toLowerCase();
+    if (message.contains('permission')) return 'Permission denied.';
+    if (message.contains('failed-precondition') || message.contains('index')) {
+      return 'Required Firestore index missing.';
+    }
+    if (message.contains('sensorhistory')) {
+      return 'Malformed sensorHistory records.';
+    }
+    if (message.contains('systemevents')) {
+      return 'Malformed systemEvents records.';
+    }
+    return 'Unable to read history records.';
   }
 
   @override
@@ -141,15 +167,15 @@ class _LogBookScreenState extends State<LogBookScreen> {
                       child: FutureBuilder<_LogData>(
                         future: _logData,
                         builder: (context, snapshot) {
-                          if (snapshot.hasError) {
-                            return _buildErrorState();
-                          }
-
                           if (!snapshot.hasData) {
                             return _buildLoadingState();
                           }
 
                           final data = snapshot.data!;
+
+                          if (data.error != null) {
+                            return _buildErrorState(data.error!);
+                          }
 
                           return AnimatedSwitcher(
                             duration: const Duration(milliseconds: 220),
@@ -344,7 +370,8 @@ class _LogBookScreenState extends State<LogBookScreen> {
     );
   }
 
-  Widget _buildErrorState() {
+  Widget _buildErrorState(Object error) {
+    final debugDetail = _safeErrorDetail(error);
     return Center(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 420),
@@ -381,6 +408,14 @@ class _LogBookScreenState extends State<LogBookScreen> {
                 color: Color(0xFF373431),
               ),
             ),
+            if (kDebugMode) ...[
+              const SizedBox(height: 8),
+              Text(
+                debugDetail,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 13, color: Color(0xFF9A5C4C)),
+              ),
+            ],
             const SizedBox(height: 14),
             FilledButton.icon(
               onPressed: () => setState(() => _logData = _loadLogData()),
@@ -408,10 +443,15 @@ class _LogBookScreenState extends State<LogBookScreen> {
 }
 
 class _LogData {
-  const _LogData({required this.sensors, required this.events});
+  const _LogData({
+    required this.sensors,
+    required this.events,
+    this.error,
+  });
 
   final List<SensorHistoryRecord> sensors;
   final List<SystemEventLog> events;
+  final Object? error;
 }
 
 class _DateRangeSelector extends StatelessWidget {
