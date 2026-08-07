@@ -11,8 +11,8 @@ class AppTheme {
   // Palette
   // ---------------------------------------------------------------------
   static const Color primary = Color(0xFF8B5E3C); // brown (header)
-  static const Color primaryLight = Color(0xFFB68C63); // light brown 
-  static const Color primaryDark = Color.fromARGB(255, 52, 85, 194); 
+  static const Color primaryLight = Color(0xFFB68C63); // light brown
+  static const Color primaryDark = Color.fromARGB(255, 52, 85, 194);
   static const Color surface = Color(0xFFF7F5F2);
   static const Color cardSurface = Color(0xFFFFFFFF);
   static const Color success = Color(0xFF34A853);
@@ -90,21 +90,21 @@ class AppTheme {
 
   /// Soft elevation shadow reused across every card in the app.
   static List<BoxShadow> softShadow({double opacity = 0.06}) => [
-        BoxShadow(
-          color: Colors.black.withOpacity(opacity),
-          blurRadius: 24,
-          offset: const Offset(0, 8),
-          spreadRadius: -4,
-        ),
-      ];
+    BoxShadow(
+      color: Colors.black.withOpacity(opacity),
+      blurRadius: 24,
+      offset: const Offset(0, 8),
+      spreadRadius: -4,
+    ),
+  ];
 
   /// Slightly stronger shadow used on hover (web/desktop) for affordance.
   static List<BoxShadow> hoverShadow() => [
-        BoxShadow(
-          color: primary.withOpacity(0.18),
-          blurRadius: 28,
-          offset: const Offset(0, 12),
-          spreadRadius: -6,
-        ),
-      ];
+    BoxShadow(
+      color: primary.withOpacity(0.18),
+      blurRadius: 28,
+      offset: const Offset(0, 12),
+      spreadRadius: -6,
+    ),
+  ];
 }

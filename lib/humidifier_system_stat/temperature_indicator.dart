@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 class TemperatureIndicator extends StatelessWidget {
   final double temperature;
 
-  const TemperatureIndicator({
-    super.key,
-    required this.temperature,
-  });
+  const TemperatureIndicator({super.key, required this.temperature});
 
   static const double minTemp = 0;
   static const double maxTemp = 45;
@@ -25,20 +22,19 @@ class TemperatureIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final percent =
-        ((temperature - minTemp) / (maxTemp - minTemp)).clamp(0.0, 1.0);
+    final percent = ((temperature - minTemp) / (maxTemp - minTemp)).clamp(
+      0.0,
+      1.0,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-
         Row(
           children: [
             const Text(
               "Temperature",
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontWeight: FontWeight.w600),
             ),
             const Spacer(),
             Text(
@@ -59,7 +55,6 @@ class TemperatureIndicator extends StatelessWidget {
             return Stack(
               clipBehavior: Clip.none,
               children: [
-
                 Container(
                   height: 14,
                   decoration: BoxDecoration(

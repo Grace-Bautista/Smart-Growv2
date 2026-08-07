@@ -217,9 +217,7 @@ class _AnimatedNotificationTileState extends State<AnimatedNotificationTile>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.1),
       end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(_controller);
     _controller.forward();
@@ -271,10 +269,7 @@ class _AnimatedNotificationTileState extends State<AnimatedNotificationTile>
                     children: [
                       CircleAvatar(
                         backgroundColor: widget.item.color.withOpacity(0.2),
-                        child: Icon(
-                          widget.item.icon,
-                          color: widget.item.color,
-                        ),
+                        child: Icon(widget.item.icon, color: widget.item.color),
                       ),
                       SizedBox(width: width * 0.04),
                       Expanded(

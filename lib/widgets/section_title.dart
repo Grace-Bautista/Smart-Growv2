@@ -21,15 +21,16 @@ class SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = switch (strength) {
-      TitleStrength.strong =>
-        Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 16),
+      TitleStrength.strong => Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(fontSize: 16),
       TitleStrength.subtle => Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: AppTheme.textSecondary,
-          fontWeight: FontWeight.w500,
-        ),
-      TitleStrength.plain => Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: AppTheme.textSecondary,
-        ),
+        color: AppTheme.textSecondary,
+        fontWeight: FontWeight.w500,
+      ),
+      TitleStrength.plain => Theme.of(
+        context,
+      ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
     };
 
     // "plain" is just centred text with no flanking dividers — used for

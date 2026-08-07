@@ -35,8 +35,9 @@ class SensorMonitorService {
 
   /// Latest snapshot from the ESP32 — screens listen to this instead of
   /// each polling the device themselves.
-  static final ValueNotifier<Esp32Snapshot> latest =
-      ValueNotifier(Esp32Snapshot.offline());
+  static final ValueNotifier<Esp32Snapshot> latest = ValueNotifier(
+    Esp32Snapshot.offline(),
+  );
 
   static Timer? _timer;
   static bool _started = false;

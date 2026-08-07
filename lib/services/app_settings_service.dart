@@ -10,10 +10,7 @@ class AppFontSettings {
   final double headerFontSize;
   final double bodyFontSize;
 
-  AppFontSettings copyWith({
-    double? headerFontSize,
-    double? bodyFontSize,
-  }) {
+  AppFontSettings copyWith({double? headerFontSize, double? bodyFontSize}) {
     return AppFontSettings(
       headerFontSize: headerFontSize ?? this.headerFontSize,
       bodyFontSize: bodyFontSize ?? this.bodyFontSize,
@@ -25,8 +22,9 @@ class AppSettingsService {
   static const _headerKey = 'settings.headerFontSize';
   static const _bodyKey = 'settings.bodyFontSize';
 
-  static final ValueNotifier<AppFontSettings> settings =
-      ValueNotifier(const AppFontSettings(headerFontSize: 18, bodyFontSize: 14));
+  static final ValueNotifier<AppFontSettings> settings = ValueNotifier(
+    const AppFontSettings(headerFontSize: 18, bodyFontSize: 14),
+  );
 
   static AppFontSettings get current => settings.value;
 
@@ -44,8 +42,4 @@ class AppSettingsService {
     await prefs.setDouble(_bodyKey, next.bodyFontSize);
     settings.value = next;
   }
-
-  
-
-  
 }

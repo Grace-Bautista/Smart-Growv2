@@ -234,4 +234,74 @@ exports.resetStaffPassword = functions.https.onCall(async (data, context) => {
   return { resetLink };
 });
 
+const DEVICE_ID = "smartGrow01";
+const FIVE_MINUTES_MS = 5 * 60 * 1000;
 
+function fiveMinuteBucketId(milliseconds) {
+  return new Date(Math.floor(milliseconds / FIVE_MINUTES_MS) * FIVE_MINUTES_MS)
+    .toISOString().replace(/[:.]/g, "-");
+}
+
+exports.sampleSensorHistory = functions.database
+  .ref("/liveData/{deviceId}")
+  .onWrite(async (change, context) => {
+    if (context.params.deviceId !== DEVICE_ID || !change.after.exists()) return null;
+    const live = change.after.val() || {};
+    const sensors = live.sensors || {};
+    const status = live.sensorStatus || {};
+    const names = ["environmentTemp", "humidity", "co2", "waterLevel", "humidifierTemp"];
+    const usable = names.some((name) => typeof sensors[name] === "number" && status[name]?.valid === true);
+    if (!usable) return null;
+    const now = Date.now();
+    const id = fiveMinuteBucketId(now);
+    const values = Object.fromEntries(names.map((name) => [name, typeof sensors[name] === "number" ? sensors[name] : 0]));
+    const validity = Object.fromEntries(names.map((name) => [name, status[name]?.valid === true]));
+    const ref = db.doc(`devices/${DEVICE_ID}/sensorHistory/${id}`);
+    return db.runTransaction(async (transaction) => {
+      if ((await transaction.get(ref)).exists) return;
+      transaction.create(ref, {
+        deviceId: DEVICE_ID, timestamp: timestamp(), ...values, validity,
+        bootId: live.device?.bootId || "",
+      });
+    });
+  });
+
+function eventDocument(context, suffix, data) {
+  const id = `${context.eventId}_${suffix}`.replace(/[^a-zA-Z0-9_-]/g, "_");
+  return db.doc(`devices/${DEVICE_ID}/systemEvents/${id}`).set({
+    deviceId: DEVICE_ID, timestamp: timestamp(), severity: "info", ...data,
+  }, {merge: true});
+}
+
+exports.logConfirmedLiveEvents = functions.database
+  .ref("/liveData/{deviceId}")
+  .onUpdate(async (change, context) => {
+    if (context.params.deviceId !== DEVICE_ID) return null;
+    const before = change.before.val() || {};
+    const after = change.after.val() || {};
+    const writes = [];
+    const bo = before.components || {}, ao = after.components || {};
+    for (const component of ["baseFan", "humidifier", "loopPump", "uvLight", "ventFan"]) {
+      if (typeof ao[component] === "boolean" && bo[component] !== ao[component]) {
+        writes.push(eventDocument(context, component, {category:"component", component, eventType:"state_changed", previousValue:bo[component] ?? null, newValue:ao[component], source:"device", message:`${component} turned ${ao[component] ? "on" : "off"}`, bootId:after.device?.bootId || ""}));
+      }
+    }
+    const br = bo.refillPump || {}, ar = ao.refillPump || {};
+    if (["auto","on","off"].includes(ar.mode) && br.mode !== ar.mode) writes.push(eventDocument(context,"refill_mode",{category:"component",component:"refillPump.mode",eventType:"mode_changed",previousValue:br.mode ?? null,newValue:ar.mode,source:"device",message:`Refill pump mode changed to ${ar.mode}`,bootId:after.device?.bootId||""}));
+    if (typeof ar.running === "boolean" && br.running !== ar.running) writes.push(eventDocument(context,"refill_running",{category:"component",component:"refillPump.running",eventType:ar.running?"refill_started":"refill_stopped",previousValue:br.running??null,newValue:ar.running,source:ar.reason?.startsWith("auto")?"automatic_refill":"device",reason:ar.reason||"",message:`Refill pump ${ar.running?"started":"stopped"}`,bootId:after.device?.bootId||""}));
+    const bv=before.sensorStatus||{}, av=after.sensorStatus||{};
+    for (const sensor of Object.keys(av)) if (typeof av[sensor]?.valid === "boolean" && bv[sensor]?.valid !== av[sensor].valid) writes.push(eventDocument(context,`sensor_${sensor}`,{category:"sensor",component:sensor,eventType:av[sensor].valid?"sensor_recovered":"sensor_invalid",previousValue:bv[sensor]?.valid??null,newValue:av[sensor].valid,source:"device",severity:av[sensor].valid?"info":"warning",message:`${sensor} ${av[sensor].valid?"recovered":"became invalid"}`}));
+    if (typeof after.device?.online === "boolean" && before.device?.online !== after.device.online) writes.push(eventDocument(context,"online",{category:"device",eventType:after.device.online?"device_online":"device_offline",previousValue:before.device?.online??null,newValue:after.device.online,source:"device",severity:after.device.online?"info":"warning",message:`Device ${after.device.online?"online":"offline"}`,bootId:after.device?.bootId||""}));
+    return Promise.all(writes);
+  });
+
+exports.logCommandAcknowledgement = functions.database
+  .ref("/deviceCommands/{deviceId}/components/{component}")
+  .onUpdate(async (change, context) => {
+    if (context.params.deviceId !== DEVICE_ID) return null;
+    const before=change.before.val()||{}, after=change.after.val()||{};
+    if (before.status === after.status || !["applied","failed"].includes(after.status)) return null;
+    return eventDocument(context,"ack",{category:"command",component:context.params.component,eventType:after.status==="applied"?"command_applied":"command_failed",source:"manual_command",commandId:after.commandId||"",requestedBy:after.requestedBy||"",reason:after.errorCode||"",issuedAt:typeof after.issuedAt==="number"?admin.firestore.Timestamp.fromMillis(after.issuedAt):null,acknowledgedAt:timestamp(),severity:after.status==="failed"?"error":"info",message:`Command ${after.status}`});
+  });
+
+exports._test = {fiveMinuteBucketId};

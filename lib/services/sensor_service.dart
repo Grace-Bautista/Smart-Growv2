@@ -4,7 +4,7 @@ import 'package:smart_grow_code/models/sensor_data.dart';
 /// Authoritative RTDB live-state service. It never polls the ESP32 directly.
 class SensorService {
   SensorService({FirebaseDatabase? database, this.deviceId = defaultDeviceId})
-      : _database = database ?? FirebaseDatabase.instance;
+    : _database = database ?? FirebaseDatabase.instance;
 
   static const String defaultDeviceId = 'smartGrow01';
   static final SensorService instance = SensorService();

@@ -120,126 +120,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
     },
   );
 
-  Widget _header(BuildContext context) => SliverAppBar(
-    pinned: true,
-    floating: true,
-    backgroundColor: AppTheme.primary,
-    title: const Text('SmartGrow'),
-    actions: [
-      Padding(
-        padding: const EdgeInsets.only(right: AppTheme.space4),
-        child: ValueListenableBuilder<int>(
-          valueListenable: AlertStore.unreadCount,
-          builder: (context, unread, _) => InkResponse(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const NotificationScreen()),
-            ),
-            child: Badge(
-              isLabelVisible: unread > 0,
-              label: Text(unread > 9 ? '9+' : '$unread'),
-              child: const Icon(
-                Icons.notifications_none_rounded,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ),
-      ),
-    ],
-  );
-  //Environmental Status
-  Widget _body(
-    BuildContext context,
-    SensorData data,
-    bool available,
-    bool hasError,
-  ) {
+  Widget _header(BuildContext context) => SliverAppBar(pinned: true, floating: true, backgroundColor: AppTheme.primary, title: const Text('SmartGrow'), actions: [Padding(padding: const EdgeInsets.only(right: AppTheme.space4), child: ValueListenableBuilder<int>(valueListenable: AlertStore.unreadCount, builder: (context, unread, _) => InkResponse(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen())), child: Badge(isLabelVisible: unread > 0, label: Text(unread > 9 ? '9+' : '$unread'), child: const Icon(Icons.notifications_none_rounded, color: Colors.white)))))]);
+
+  Widget _body(BuildContext context, SensorData data, bool available, bool hasError) {
     final manual = data.automationMode == AutomationMode.manual;
     final controlsEnabled = available && manual;
-    final water = data.waterLevelStatus.isFresh(DateTime.now())
-        ? data.waterLevel
-        : null;
-    final humidifierTemp = data.humidifierTempStatus.isFresh(DateTime.now())
-        ? data.humidifierTemperature
-        : null;
-    return Padding(
-      padding: const EdgeInsets.all(AppTheme.space5),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          EnvironmentStatus(
-            isOnline: available,
-            sensors: _sensorsFrom(data),
-            onToggleOnline: () => _showSnack(
-              hasError
-                  ? 'RTDB connection error'
-                  : available
-                  ? 'Live data is current'
-                  : 'ESP32 unavailable',
-            ),
-            onSensorTap: (sensor) =>
-                _showSnack('${sensor.label}: ${sensor.value}${sensor.unit}'),
-          ),
-          // Control Panel
-          const SizedBox(height: AppTheme.space3),
-          const SectionTitle(title: 'Control Panel'),
-          const SizedBox(height: AppTheme.space3),
-          ControlPanel(
-            temp: humidifierTemp ?? 0,
-            waterLevel: water ?? 0,
-            pumpActive: data.loopPumpOn ?? false,
-            fanActive: data.baseFanOn ?? false,
-            refillMode: _refillMode(data),
-            isActivated: data.humidifierOn ?? false,
-            controlsEnabled: controlsEnabled,
-            pumpPending: _pending(IotCommandTarget.loopPump),
-            fanPending: _pending(IotCommandTarget.baseFan),
-            refillPending: _pending(IotCommandTarget.refillPumpMode),
-            humidifierPending: _pending(IotCommandTarget.humidifier),
-            onTempChanged: null,
-            onWaterLevelChanged: null,
-            onTogglePump: () =>
-                _send(IotCommandTarget.loopPump, !(data.loopPumpOn ?? false)),
-            onToggleFan: () =>
-                _send(IotCommandTarget.baseFan, !(data.baseFanOn ?? false)),
-            onRefillModeChanged: (mode) => _setRefillPump(data, mode),
-            onActivate: () => _send(
-              IotCommandTarget.humidifier,
-              !(data.humidifierOn ?? false),
-            ),
-          ),
-          if (!manual)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Text('Switch to Manual mode before controlling outputs.'),
-            ),
-          if (!manual && available)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: _pending(IotCommandTarget.automationMode)
-                    ? null
-                    : () => _send(IotCommandTarget.automationMode, 'manual'),
-                child: Text(
-                  _pending(IotCommandTarget.automationMode)
-                      ? 'Switching to Manual…'
-                      : 'Switch to Manual mode',
-                ),
-              ),
-            ),
-          if (!available)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Text('ESP32 is offline or heartbeat is stale.'),
-            ),
-          const SizedBox(height: AppTheme.space5),
-          _deviceRow(data, controlsEnabled),
-          if (_error(IotCommandTarget.uvLight) != null)
-            Text('UV command: ${_error(IotCommandTarget.uvLight)}'),
-        ],
-      ),
-    );
+    final water = data.waterLevelStatus.isFresh(DateTime.now()) ? data.waterLevel : null;
+    final humidifierTemp = data.humidifierTempStatus.isFresh(DateTime.now()) ? data.humidifierTemperature : null;
+    return Padding(padding: const EdgeInsets.all(AppTheme.space5), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      EnvironmentStatus(isOnline: available, sensors: _sensorsFrom(data), onToggleOnline: () => _showSnack(hasError ? 'RTDB connection error' : available ? 'Live data is current' : 'ESP32 unavailable'), onSensorTap: (sensor) => _showSnack('${sensor.label}: ${sensor.value}${sensor.unit}')),
+      const SizedBox(height: AppTheme.space5), const SectionTitle(title: 'Control Panel'), const SizedBox(height: AppTheme.space5),
+      ControlPanel(temp: humidifierTemp ?? 0, waterLevel: water ?? 0, pumpActive: data.loopPumpOn ?? false, fanActive: data.baseFanOn ?? false, refillMode: _refillMode(data), isActivated: data.humidifierOn ?? false,
+        controlsEnabled: controlsEnabled, pumpPending: _pending(IotCommandTarget.loopPump), fanPending: _pending(IotCommandTarget.baseFan), refillPending: _pending(IotCommandTarget.refillPumpMode), humidifierPending: _pending(IotCommandTarget.humidifier),
+        onTempChanged: null, onWaterLevelChanged: null, onTogglePump: () => _send(IotCommandTarget.loopPump, !(data.loopPumpOn ?? false)), onToggleFan: () => _send(IotCommandTarget.baseFan, !(data.baseFanOn ?? false)), onRefillModeChanged: (mode) => _setRefillPump(data, mode), onActivate: () => _send(IotCommandTarget.humidifier, !(data.humidifierOn ?? false))),
+      if (!manual) const Padding(padding: EdgeInsets.only(top: 8), child: Text('Switch to Manual mode before controlling outputs.')),
+      if (!manual && available) Align(alignment: Alignment.centerLeft, child: TextButton(onPressed: _pending(IotCommandTarget.automationMode) ? null : () => _send(IotCommandTarget.automationMode, 'manual'), child: Text(_pending(IotCommandTarget.automationMode) ? 'Switching to Manual…' : 'Switch to Manual mode'))),
+      if (!available) const Padding(padding: EdgeInsets.only(top: 8), child: Text('ESP32 is offline or heartbeat is stale.')),
+      const SizedBox(height: AppTheme.space5), _deviceRow(data, controlsEnabled),
+      if (_error(IotCommandTarget.uvLight) != null) Text('UV command: ${_error(IotCommandTarget.uvLight)}'),
+    ]));
   }
 
   RefillMode _refillMode(SensorData data) =>

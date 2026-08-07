@@ -36,9 +36,9 @@ class EnvironmentStatus extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Environment Status',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontSize: 19,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.headlineSmall?.copyWith(fontSize: 19),
                 ),
               ),
               const SizedBox(width: AppTheme.space3),
@@ -46,27 +46,51 @@ class EnvironmentStatus extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppTheme.space5),
-          Row(
-                // Wrap keeps sensor tiles from overflowing on very narrow
-                // screens (e.g. a phone rotated, or a resized web window)
-                // while still filling the row nicely on wider layouts.
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // Wrap keeps sensor tiles from overflowing on very narrow
+              // screens (e.g. a phone rotated, or a resized web window)
+              // while still filling the row nicely on wider layouts.
+              final tileWidth = (constraints.maxWidth - AppTheme.space3 * 2) / 3;
+              final useWrap = tileWidth < 96;
+
+              if (!useWrap) {
+                return Row(
+                  children: [
+                    for (int i = 0; i < sensors.length; i++) ...[
+                      if (i != 0) const SizedBox(width: AppTheme.space3),
+                      Expanded(
+                        child: SensorCard(
+                          sensor: sensors[i],
+                          onTap: () => onSensorTap(sensors[i]),
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              }
+
+              return Wrap(
+                spacing: AppTheme.space3,
+                runSpacing: AppTheme.space3,
                 children: [
-                  for (int i = 0; i < sensors.length; i++) ...[
-                    if (i != 0) const SizedBox(width: AppTheme.space3),
-                    Expanded(
+                  for (final sensor in sensors)
+                    SizedBox(
+                      width: (constraints.maxWidth - AppTheme.space3) / 2,
                       child: SensorCard(
-                        sensor: sensors[i],
-                        onTap: () => onSensorTap(sensors[i]),
+                        sensor: sensor,
+                        onTap: () => onSensorTap(sensor),
                       ),
                     ),
-                  ],
                 ],
-              ),
-            ],         
+              );
+            },
           ),
-        );
-      }
-    } 
+        ],
+      ),
+    );
+  }
+}
 
 
 /// Pill-shaped, tappable Online/Offline indicator with an animated colour

@@ -36,9 +36,9 @@ class SliderTile extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.textPrimary,
-                fontWeight: FontWeight.w500,
-              ),
+            color: AppTheme.textPrimary,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         const SizedBox(height: AppTheme.space1),
         Row(
@@ -47,9 +47,9 @@ class SliderTile extends StatelessWidget {
               width: 34,
               child: Text(
                 valueLabel,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.textPrimary,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppTheme.textPrimary),
               ),
             ),
             Expanded(
@@ -61,8 +61,9 @@ class SliderTile extends StatelessWidget {
                   thumbShape: const RoundSliderThumbShape(
                     enabledThumbRadius: 9,
                   ),
-                  overlayShape:
-                      const RoundSliderOverlayShape(overlayRadius: 18),
+                  overlayShape: const RoundSliderOverlayShape(
+                    overlayRadius: 18,
+                  ),
                   thumbColor: activeColor,
                   overlayColor: activeColor.withOpacity(0.15),
                   trackShape: const RoundedRectSliderTrackShape(),

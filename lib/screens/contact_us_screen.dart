@@ -153,18 +153,12 @@ class ContactUsScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.brown.withOpacity(0.08),
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(
-            color: Colors.brown.withOpacity(0.2),
-          ),
+          border: Border.all(color: Colors.brown.withOpacity(0.2)),
         ),
 
         child: Row(
           children: [
-            Icon(
-              icon,
-              color: Colors.brown.shade700,
-              size: screen.width * 0.06,
-            ),
+            Icon(icon, color: Colors.brown.shade700, size: screen.width * 0.06),
 
             SizedBox(width: screen.width * 0.04),
 
@@ -179,10 +173,7 @@ class ContactUsScreen extends StatelessWidget {
               ),
             ),
 
-            Icon(
-              Icons.copy,
-              color: Colors.brown.shade400,
-            ),
+            Icon(Icons.copy, color: Colors.brown.shade400),
           ],
         ),
       ),
@@ -190,10 +181,7 @@ class ContactUsScreen extends StatelessWidget {
   }
 
   Future<void> _launchEmail() async {
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: 'bloqdevz@gmail.com',
-    );
+    final Uri emailUri = Uri(scheme: 'mailto', path: 'bloqdevz@gmail.com');
 
     if (await canLaunchUrl(emailUri)) {
       await launchUrl(emailUri);
@@ -201,10 +189,7 @@ class ContactUsScreen extends StatelessWidget {
   }
 
   Future<void> _launchPhone() async {
-    final Uri phoneUri = Uri(
-      scheme: 'tel',
-      path: '0945670341',
-    );
+    final Uri phoneUri = Uri(scheme: 'tel', path: '0945670341');
 
     if (await canLaunchUrl(phoneUri)) {
       await launchUrl(phoneUri);

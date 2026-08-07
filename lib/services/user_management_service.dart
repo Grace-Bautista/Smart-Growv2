@@ -57,30 +57,25 @@ class UserManagementService {
     return _call('deleteUser', {'uid': uid});
   }
 
-static Future<void> resetStaffPassword(String email) async {
-  await FirebaseAuth.instance.sendPasswordResetEmail(
-    email: email.trim(),
-  );
-}
-
-static Future<void> resetCurrentUserPassword() async {
-  final user = FirebaseAuth.instance.currentUser;
-
-  if (user == null) {
-    throw Exception('You need to log in first.');
+  static Future<void> resetStaffPassword(String email) async {
+    await FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
   }
 
-  if (user.email == null) {
-    throw Exception('This account does not have an email.');
-  }
+  static Future<void> resetCurrentUserPassword() async {
+    final user = FirebaseAuth.instance.currentUser;
 
-  await FirebaseAuth.instance.sendPasswordResetEmail(
-    email: user.email!,
-  );
-}
+    if (user == null) {
+      throw Exception('You need to log in first.');
+    }
+
+    if (user.email == null) {
+      throw Exception('This account does not have an email.');
+    }
+
+    await FirebaseAuth.instance.sendPasswordResetEmail(email: user.email!);
+  }
 
   static Future<void> _call(String name, Map<String, dynamic> data) async {
     await _functions.httpsCallable(name).call(data);
   }
-
 }

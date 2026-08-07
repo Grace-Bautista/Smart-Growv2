@@ -1,37 +1,84 @@
 {
-    "liveData": {
-      "smartGrow01": {
-        "sensors": {
-          "environmentTemp": 25.4,
-          "humidity": 72,
-          "co2": 400,
-          "waterLevel": 85,
-          "humidifierTemp": 22.5
+  "liveData": {
+    "smartGrow01": {
+      "components": {
+        "baseFan": false,
+        "humidifier": false,
+        "loopPump": false,
+        "refillPump": {
+          "mode": "off",
+          "running": false,
+          "reason": "mode_off",
+          "startedAt": 0,
+          "lastChangedAt": 0,
+          "fault": null
         },
-        "sensorStatus": {
-          "environmentTemp": {"valid": true, "updatedAt": 0},
-          "humidity": {"valid": true, "updatedAt": 0},
-          "co2": {"valid": true, "updatedAt": 0},
-          "waterLevel": {"valid": true, "updatedAt": 0},
-          "humidifierTemp": {"valid": true, "updatedAt": 0}
+        "uvLight": false,
+        "ventFan": false
+      },
+      "componentStatus": {
+        "baseFan": {
+          "updatedAt": 0,
+          "fault": null
         },
-        "components": {
-          "humidifier": false,
-          "ventFan": false,
-          "baseFan": true,
-          "refillPump": false,
-          "loopPump": true,
-          "uvLight": false
+        "humidifier": {
+          "updatedAt": 0,
+          "fault": null
         },
-        "automation": {
-          "mode": "automatic",
-          "refillPumpMode": "automatic"
+        "loopPump": {
+          "updatedAt": 0,
+          "fault": null
         },
-        "device": {
-          "online": true,
-          "lastHeartbeat": 0,
-          "bootId": ""
+        "uvLight": {
+          "updatedAt": 0,
+          "fault": null
+        },
+        "ventFan": {
+          "updatedAt": 0,
+          "fault": null
         }
+      },
+      "device": {
+        "bootId": "",
+        "firmwareVersion": "",
+        "lastHeartbeat": 0,
+        "lastStateUpdate": 0,
+        "online": false
+      },
+      "sensorStatus": {
+        "co2": {
+          "updatedAt": 0,
+          "valid": false
+        },
+        "environmentTemp": {
+          "updatedAt": 0,
+          "valid": false
+        },
+        "humidifierTemp": {
+          "updatedAt": 0,
+          "valid": false
+        },
+        "humidity": {
+          "updatedAt": 0,
+          "valid": false
+        },
+        "waterLevel": {
+          "updatedAt": 0,
+          "valid": false
+        }
+      },
+      "sensors": {
+        "co2": 0,
+        "environmentTemp": 0,
+        "humidifierTemp": 0,
+        "humidity": 0,
+        "waterLevel": 0
       }
     }
+  },
+  "deviceCommands": {
+    "smartGrow01": {
+      "components": {}
+    }
   }
+}

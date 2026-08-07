@@ -14,10 +14,7 @@ class StaffUserFormResult {
 }
 
 class StaffUserFormDialog extends StatefulWidget {
-  const StaffUserFormDialog({
-    super.key,
-    this.user,
-  });
+  const StaffUserFormDialog({super.key, this.user});
 
   final AppUser? user;
 
@@ -90,9 +87,7 @@ class _StaffUserFormDialogState extends State<StaffUserFormDialog> {
                     labelText: 'Temporary Password',
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _showPassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+                        _showPassword ? Icons.visibility : Icons.visibility_off,
                       ),
                       onPressed: () {
                         setState(() => _showPassword = !_showPassword);
