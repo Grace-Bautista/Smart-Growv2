@@ -250,11 +250,13 @@ exports.sampleSensorHistory = functions.database
     const sensors = live.sensors || {};
     const status = live.sensorStatus || {};
     const names = ["environmentTemp", "humidity", "co2", "waterLevel", "humidifierTemp"];
-    const usable = names.some((name) => typeof sensors[name] === "number" && status[name]?.valid === true);
+    // Dart history records require all five valid numeric readings. Skip this
+    // bucket rather than writing fabricated zeroes for unavailable telemetry.
+    const usable = names.every((name) => Number.isFinite(sensors[name]) && status[name]?.valid === true);
     if (!usable) return null;
     const now = Date.now();
     const id = fiveMinuteBucketId(now);
-    const values = Object.fromEntries(names.map((name) => [name, typeof sensors[name] === "number" ? sensors[name] : 0]));
+    const values = Object.fromEntries(names.map((name) => [name, sensors[name]]));
     const validity = Object.fromEntries(names.map((name) => [name, status[name]?.valid === true]));
     const ref = db.doc(`devices/${DEVICE_ID}/sensorHistory/${id}`);
     return db.runTransaction(async (transaction) => {
@@ -292,6 +294,15 @@ exports.logConfirmedLiveEvents = functions.database
     const bv=before.sensorStatus||{}, av=after.sensorStatus||{};
     for (const sensor of Object.keys(av)) if (typeof av[sensor]?.valid === "boolean" && bv[sensor]?.valid !== av[sensor].valid) writes.push(eventDocument(context,`sensor_${sensor}`,{category:"sensor",component:sensor,eventType:av[sensor].valid?"sensor_recovered":"sensor_invalid",previousValue:bv[sensor]?.valid??null,newValue:av[sensor].valid,source:"device",severity:av[sensor].valid?"info":"warning",message:`${sensor} ${av[sensor].valid?"recovered":"became invalid"}`}));
     if (typeof after.device?.online === "boolean" && before.device?.online !== after.device.online) writes.push(eventDocument(context,"online",{category:"device",eventType:after.device.online?"device_online":"device_offline",previousValue:before.device?.online??null,newValue:after.device.online,source:"device",severity:after.device.online?"info":"warning",message:`Device ${after.device.online?"online":"offline"}`,bootId:after.device?.bootId||""}));
+    const bStatus = before.componentStatus || {}, aStatus = after.componentStatus || {};
+    for (const component of ["baseFan", "humidifier", "loopPump", "uvLight", "ventFan"]) {
+      const previous = bStatus[component]?.fault, next = aStatus[component]?.fault;
+      const hadFault = typeof previous === "string" && previous.length > 0, hasFault = typeof next === "string" && next.length > 0;
+      if (hadFault !== hasFault) writes.push(eventDocument(context,`fault_${component}`,{category:"fault",component,eventType:hasFault?"fault_started":"fault_cleared",previousValue:previous??null,newValue:next??null,source:"device",message:hasFault?`${component} fault started`:`${component} fault cleared`,bootId:after.device?.bootId||""}));
+    }
+    const previousRefillFault = br.fault, nextRefillFault = ar.fault;
+    const hadRefillFault = typeof previousRefillFault === "string" && previousRefillFault.length > 0, hasRefillFault = typeof nextRefillFault === "string" && nextRefillFault.length > 0;
+    if (hadRefillFault !== hasRefillFault) writes.push(eventDocument(context,"fault_refillPump",{category:"fault",component:"refillPump",eventType:hasRefillFault?"fault_started":"fault_cleared",previousValue:previousRefillFault??null,newValue:nextRefillFault??null,source:"device",message:hasRefillFault?"refillPump fault started":"refillPump fault cleared",bootId:after.device?.bootId||""}));
     return Promise.all(writes);
   });
 

@@ -38,33 +38,41 @@ class SensorCard extends StatelessWidget {
       radius: AppTheme.radiusSm,
       color: AppTheme.surface,
       border: Border.all(color: AppTheme.divider),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppTheme.space3,
-        vertical: AppTheme.space4,
-      ),
+
+      // Less space at the top
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
-              Icon(sensor.icon, size: 18, color: AppTheme.primary),
-              const SizedBox(width: AppTheme.space1),
+              // Sensor icon
+              Icon(sensor.icon, size: 14, color: AppTheme.primary),
+
+              const SizedBox(width: 3),
+
+              // Sensor name
               Expanded(
                 child: Text(
                   sensor.label,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 10,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.textPrimary,
                   ),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.info_outline_rounded, size: 18),
-                color: AppTheme.textSecondary,
-                tooltip: 'More info about ${sensor.label}',
-                onPressed: () {
+
+              const SizedBox(width: 2),
+
+              // Compact info icon - does NOT reserve IconButton's large space
+              InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () {
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
@@ -79,25 +87,42 @@ class SensorCard extends StatelessWidget {
                     ),
                   );
                 },
+                child: const Padding(
+                  padding: EdgeInsets.all(2),
+                  child: Icon(
+                    Icons.info_outline_rounded,
+                    size: 13,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: AppTheme.space3),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text.rich(
-              TextSpan(
-                text: sensor.value,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontSize: 20),
-                children: [
-                  TextSpan(
-                    text: sensor.unit,
-                    style: Theme.of(context).textTheme.bodySmall,
+
+          const SizedBox(height: 8),
+
+          // Center the reading independently from the header
+          Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text.rich(
+                TextSpan(
+                  text: sensor.value,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
                   ),
-                ],
+                  children: [
+                    TextSpan(
+                      text: sensor.unit,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

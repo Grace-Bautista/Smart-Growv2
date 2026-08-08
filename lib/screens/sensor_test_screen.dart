@@ -11,8 +11,9 @@ class SensorTestScreen extends StatelessWidget {
   final IotCommandService _commands = IotCommandService.instance;
 
   @override Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Live RTDB Data Test'), backgroundColor: const Color(0xFFB68C63)), body: StreamBuilder<SensorData>(stream: _sensorService.watchLiveData(), builder: (context, snapshot) {
-    if (snapshot.hasError) return _MessageView(icon: Icons.error_outline, message: 'Could not read live data.\n${snapshot.error}');
-    if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+    if (snapshot.hasError) { return _MessageView(icon: Icons.error_outline, message: 'Could not read live data.\n${snapshot.error}');
+        }
+    if (!snapshot.hasData){ return const Center(child: CircularProgressIndicator());}
     final data = snapshot.data!; final now = DateTime.now();
     return AnimatedBuilder(animation: _commands, builder: (context, _) => ListView(padding: const EdgeInsets.all(16), children: [
       _Section('Sensors', [_tile('Environment temperature', _reading(data.environmentTemperature, 'C', data.environmentTempStatus, now)), _tile('Humidity', _reading(data.humidity, '%', data.humidityStatus, now)), _tile('CO2', _reading(data.co2, 'ppm', data.co2Status, now)), _tile('Water level', _reading(data.waterLevel, '%', data.waterLevelStatus, now)), _tile('Humidifier temperature', _reading(data.humidifierTemperature, 'C', data.humidifierTempStatus, now))]),
