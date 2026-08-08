@@ -257,10 +257,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (!available)
             const Padding(
               padding: EdgeInsets.only(top: 8),
-              child: Text(
-                'ESP32 is offline or its heartbeat is stale. '
-                'Controls are temporarily disabled.',
-              ),
+              child: Text('ESP32 is offline. Controls are disabled.'),
             ),
           const SizedBox(height: AppTheme.space5),
           _deviceRow(data, controlsEnabled),
