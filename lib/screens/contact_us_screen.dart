@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:smart_grow_code/theme/app_theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:smart_grow_code/custom_header_button.dart';
 
@@ -10,116 +11,83 @@ class ContactUsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screen = MediaQuery.of(context).size;
+    final isWide = screen.width > 600;
 
     return Scaffold(
-      body: Container(
-        /// 🤎 LIGHT BROWN GRADIENT BACKGROUND
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFFF5E6D3), // light beige
-              Color(0xFFE6CCB2), // warm sand
-              Color(0xFFD2B48C), // tan
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-
-        child: SafeArea(
-          child: Column(
-            children: [
-              const CustomHeaderButton(title: "Contact Us"),
-
-              Expanded(
-                child: Center(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final isWide = constraints.maxWidth > 600;
-
-                      return Padding(
-                        padding: EdgeInsets.all(screen.width * 0.05),
-
-                        /// 💎 GLASS CARD
-                        child: ClipRRect(
+      backgroundColor: Colors.white.withOpacity(0.9),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const CustomHeaderButton(title: "Contact Us"),
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(screen.width * 0.05),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(25),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                      child: Container(
+                        constraints: BoxConstraints(
+                          maxWidth: isWide ? 500 : double.infinity,
+                        ),
+                        padding: EdgeInsets.all(screen.width * 0.06),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryLight.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(25),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                            child: Container(
-                              constraints: BoxConstraints(
-                                maxWidth: isWide ? 500 : double.infinity,
-                              ),
-                              padding: EdgeInsets.all(screen.width * 0.06),
-
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.35),
-                                borderRadius: BorderRadius.circular(25),
-                                border: Border.all(
-                                  color: Colors.brown.withOpacity(0.2),
-                                ),
-                              ),
-
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  /// 🏷 TITLE
-                                  Text(
-                                    "Get in Touch",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: isWide ? 28 : 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.brown.shade800,
-                                    ),
-                                  ),
-
-                                  SizedBox(height: screen.height * 0.02),
-
-                                  Text(
-                                    "We’d love to hear from you",
-                                    style: TextStyle(
-                                      fontSize: isWide ? 16 : 14,
-                                      color: Colors.brown.shade600,
-                                    ),
-                                  ),
-
-                                  SizedBox(height: screen.height * 0.04),
-
-                                  /// 📧 EMAIL
-                                  _contactTile(
-                                    context,
-                                    icon: Icons.email_outlined,
-                                    label: "bloqdevz@gmail.com",
-                                    onTap: () => _launchEmail(),
-                                  ),
-
-                                  SizedBox(height: screen.height * 0.02),
-
-                                  /// 📞 PHONE
-                                  _contactTile(
-                                    context,
-                                    icon: Icons.phone_outlined,
-                                    label: "0945-670-341",
-                                    onTap: () => _launchPhone(),
-                                  ),
-                                ],
-                              ),
-                            ),
+                          border: Border.all(
+                            color: AppTheme.cardSurface.withOpacity(0.3),
                           ),
                         ),
-                      );
-                    },
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              "Get in Touch",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: isWide ? 28 : 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.brown.shade800,
+                              ),
+                            ),
+                            SizedBox(height: screen.height * 0.02),
+                            Text(
+                              "We’d love to hear from you",
+                              style: TextStyle(
+                                fontSize: isWide ? 16 : 14,
+                                color: Colors.brown.shade600,
+                              ),
+                            ),
+                            SizedBox(height: screen.height * 0.04),
+                            _contactTile(
+                              context,
+                              icon: Icons.email_outlined,
+                              label: "bloqdevz@gmail.com",
+                              onTap: () => _launchEmail(),
+                            ),
+                            SizedBox(height: screen.height * 0.02),
+                            _contactTile(
+                              context,
+                              icon: Icons.phone_outlined,
+                              label: "0945-670-341",
+                              onTap: () => _launchPhone(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  /// 🔹 CONTACT TILE
+  ///  CONTACT TILE
   Widget _contactTile(
     BuildContext context, {
     required IconData icon,
