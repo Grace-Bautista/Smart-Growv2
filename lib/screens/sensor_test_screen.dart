@@ -19,14 +19,13 @@ class SensorTestScreen extends StatelessWidget {
     body: StreamBuilder<SensorData>(
       stream: _sensorService.watchLiveData(),
       builder: (context, snapshot) {
-        if (snapshot.hasError) {
+        if (snapshot.hasError)
           return _MessageView(
             icon: Icons.error_outline,
             message: 'Could not read live data.\n${snapshot.error}',
           );
-        }
-        if (!snapshot.hasData){
-          return const Center(child: CircularProgressIndicator());}
+        if (!snapshot.hasData)
+          return const Center(child: CircularProgressIndicator());
         final data = snapshot.data!;
         final now = DateTime.now();
         return AnimatedBuilder(

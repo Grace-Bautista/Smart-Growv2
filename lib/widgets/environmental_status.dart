@@ -51,8 +51,7 @@ class EnvironmentStatus extends StatelessWidget {
               // Wrap keeps sensor tiles from overflowing on very narrow
               // screens (e.g. a phone rotated, or a resized web window)
               // while still filling the row nicely on wider layouts.
-              final tileWidth =
-                  (constraints.maxWidth - AppTheme.space3 * 2) / 3;
+              final tileWidth = (constraints.maxWidth - AppTheme.space3 * 2) / 3;
               final useWrap = tileWidth < 96;
 
               if (!useWrap) {
@@ -92,6 +91,7 @@ class EnvironmentStatus extends StatelessWidget {
     );
   }
 }
+
 
 /// Pill-shaped, tappable Online/Offline indicator with an animated colour
 /// crossfade so state changes feel alive rather than snapping instantly.
