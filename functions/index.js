@@ -252,8 +252,11 @@ exports.sampleSensorHistory = functions.database
     const names = ["environmentTemp", "humidity", "co2", "waterLevel", "humidifierTemp"];
     // Dart history records require all five valid numeric readings. Skip this
     // bucket rather than writing fabricated zeroes for unavailable telemetry.
-    const usable = names.every((name) => Number.isFinite(sensors[name]) && status[name]?.valid === true);
-    if (!usable) return null;
+    const usable = names.every(
+      (name) =>
+        Number.isFinite(sensors[name]) &&
+        status[name]?.valid !== false
+    );    if (!usable) return null;
     const now = Date.now();
     const id = fiveMinuteBucketId(now);
     const values = Object.fromEntries(names.map((name) => [name, sensors[name]]));
@@ -306,13 +309,82 @@ exports.logConfirmedLiveEvents = functions.database
     return Promise.all(writes);
   });
 
-exports.logCommandAcknowledgement = functions.database
+  exports.logCommandAcknowledgement = functions.database
   .ref("/deviceCommands/{deviceId}/components/{component}")
   .onUpdate(async (change, context) => {
-    if (context.params.deviceId !== DEVICE_ID) return null;
-    const before=change.before.val()||{}, after=change.after.val()||{};
-    if (before.status === after.status || !["applied","failed"].includes(after.status)) return null;
-    return eventDocument(context,"ack",{category:"command",component:context.params.component,eventType:after.status==="applied"?"command_applied":"command_failed",source:"manual_command",commandId:after.commandId||"",requestedBy:after.requestedBy||"",reason:after.errorCode||"",issuedAt:typeof after.issuedAt==="number"?admin.firestore.Timestamp.fromMillis(after.issuedAt):null,acknowledgedAt:timestamp(),severity:after.status==="failed"?"error":"info",message:`Command ${after.status}`});
+    if (context.params.deviceId !== DEVICE_ID) {
+      return null;
+    }
+
+    const before = change.before.val() || {};
+    const after = change.after.val() || {};
+
+    // Ignore updates where command status did not change.
+    if (before.status === after.status) {
+      return null;
+    }
+
+    // Final terminal command states used by Smart-Grow.
+    const terminalStatuses = [
+      "applied",
+      "rejected",
+      "expired",
+    ];
+
+    if (!terminalStatuses.includes(after.status)) {
+      return null;
+    }
+
+    let eventType;
+
+    switch (after.status) {
+      case "applied":
+        eventType = "command_applied";
+        break;
+
+      case "rejected":
+        eventType = "command_rejected";
+        break;
+
+      case "expired":
+        eventType = "command_expired";
+        break;
+
+      default:
+        return null;
+    }
+
+    return eventDocument(
+      context,
+      "ack",
+      {
+        category: "command",
+        component: context.params.component,
+        eventType,
+        source: "manual_command",
+
+        commandId: after.commandId || "",
+        requestedBy: after.requestedBy || "",
+
+        reason: after.lastError || "",
+
+        issuedAt:
+          typeof after.issuedAt === "number"
+            ? admin.firestore.Timestamp.fromMillis(
+                after.issuedAt
+              )
+            : null,
+
+        acknowledgedAt: timestamp(),
+
+        severity:
+          after.status === "applied"
+            ? "info"
+            : "warning",
+
+        message: `Command ${after.status}`,
+      }
+    );
   });
 
 exports._test = {fiveMinuteBucketId};

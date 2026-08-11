@@ -1,13 +1,23 @@
 {
   "rules": {
-    ".read": false, ".write": false,
-    "liveData": { "smartGrow01": { ".read": "auth != null", ".write": false } },
-    "deviceCommands": { "smartGrow01": { "components": {
-      "$component": {
+    ".read": false,
+    ".write": false,
+    "liveData": {
+      "smartGrow01": {
         ".read": "auth != null",
-        ".write": "auth != null && newData.child('requestedBy').val() == auth.uid && ($component == 'baseFan' || $component == 'humidifier' || $component == 'loopPump' || $component == 'uvLight' || $component == 'ventFan' || $component == 'refillPump')",
-        ".validate": "newData.hasChildren(['commandId','requestedBy','issuedAt','ttlMs','status']) && newData.child('commandId').isString() && newData.child('requestedBy').isString() && newData.child('issuedAt').isNumber() && newData.child('ttlMs').isNumber() && newData.child('ttlMs').val() > 0 && newData.child('ttlMs').val() <= 30000 && newData.child('status').val() == 'pending' && (($component == 'refillPump' && newData.hasChild('desiredMode') && newData.child('desiredMode').isString() && (newData.child('desiredMode').val() == 'auto' || newData.child('desiredMode').val() == 'on' || newData.child('desiredMode').val() == 'off') && !newData.hasChild('desiredState')) || ($component != 'refillPump' && newData.hasChild('desiredState') && newData.child('desiredState').isBoolean() && !newData.hasChild('desiredMode')))"
+        ".write": false
       }
-    } } }
+    },
+    "deviceCommands": {
+      "smartGrow01": {
+        "components": {
+          "$component": {
+            ".read": "auth != null",
+            ".write": "auth != null && newData.child('requestedBy').val() == auth.uid && ($component == 'humidifier' || $component == 'uvLight' || $component == 'ventFan' || $component == 'refillPump')",
+            ".validate": "newData.hasChildren(['commandId','requestedBy','issuedAt','ttlMs','status','desired']) && newData.child('commandId').isString() && newData.child('requestedBy').isString() && newData.child('issuedAt').isNumber() && newData.child('ttlMs').isNumber() && newData.child('ttlMs').val() > 0 && newData.child('ttlMs').val() <= 30000 && newData.child('status').val() == 'pending' && (($component == 'refillPump' && newData.child('desired').hasOnly(['mode']) && newData.child('desired').child('mode').isString() && (newData.child('desired').child('mode').val() == 'auto' || newData.child('desired').child('mode').val() == 'on' || newData.child('desired').child('mode').val() == 'off')) || ($component != 'refillPump' && newData.child('desired').isBoolean()))"
+          }
+        }
+      }
+    }
   }
 }

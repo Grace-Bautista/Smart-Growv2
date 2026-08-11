@@ -7,6 +7,7 @@ import 'sensor_card.dart';
 /// by a responsive row/wrap of [SensorCard]s.
 class EnvironmentStatus extends StatelessWidget {
   final bool isOnline;
+  final bool isWaiting;
   final List<Sensor> sensors;
   final VoidCallback onToggleOnline;
   final ValueChanged<Sensor> onSensorTap;
@@ -14,6 +15,7 @@ class EnvironmentStatus extends StatelessWidget {
   const EnvironmentStatus({
     super.key,
     required this.isOnline,
+    this.isWaiting = false,
     required this.sensors,
     required this.onToggleOnline,
     required this.onSensorTap,
@@ -42,7 +44,11 @@ class EnvironmentStatus extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppTheme.space3),
-              _StatusBadge(isOnline: isOnline, onTap: onToggleOnline),
+              _StatusBadge(
+                isOnline: isOnline,
+                isWaiting: isWaiting,
+                onTap: onToggleOnline,
+              ),
             ],
           ),
           const SizedBox(height: AppTheme.space3),
@@ -79,13 +85,22 @@ class EnvironmentStatus extends StatelessWidget {
 /// crossfade so state changes feel alive rather than snapping instantly.
 class _StatusBadge extends StatelessWidget {
   final bool isOnline;
+  final bool isWaiting;
   final VoidCallback onTap;
 
-  const _StatusBadge({required this.isOnline, required this.onTap});
+  const _StatusBadge({
+    required this.isOnline,
+    required this.isWaiting,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final color = isOnline ? AppTheme.success : AppTheme.danger;
+    final color = isOnline
+        ? AppTheme.success
+        : isWaiting
+        ? Colors.orange
+        : AppTheme.danger;
 
     return InkWell(
       onTap: onTap,
@@ -122,8 +137,8 @@ class _StatusBadge extends StatelessWidget {
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
               child: Text(
-                isOnline ? 'Online' : 'Offline',
-                key: ValueKey(isOnline),
+                isOnline ? 'Online' : isWaiting ? 'Connecting' : 'Offline',
+                key: ValueKey((isOnline, isWaiting)),
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/iot_command.dart';
@@ -25,6 +27,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final IotCommandService _commands = IotCommandService.instance;
 
   int _navIndex = 0;
+  Timer? _heartbeatTimer;
 
   @override
   void initState() {
@@ -32,11 +35,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     _commands.addListener(_rebuild);
     _commands.start();
+    _heartbeatTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _rebuild(),
+    );
   }
 
   @override
   void dispose() {
     _commands.removeListener(_rebuild);
+    _heartbeatTimer?.cancel();
     super.dispose();
   }
 
@@ -149,25 +157,152 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _header(BuildContext context) => SliverAppBar(pinned: true, floating: true, backgroundColor: AppTheme.primary, title: const Text('SmartGrow'), actions: [Padding(padding: const EdgeInsets.only(right: AppTheme.space4), child: ValueListenableBuilder<int>(valueListenable: AlertStore.unreadCount, builder: (context, unread, _) => InkResponse(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationScreen())), child: Badge(isLabelVisible: unread > 0, label: Text(unread > 9 ? '9+' : '$unread'), child: const Icon(Icons.notifications_none_rounded, color: Colors.white)))))]);
+  Widget _header(BuildContext context) {
+    return SliverAppBar(
+      pinned: true,
+      floating: true,
+      backgroundColor: AppTheme.primary,
+      title: const Text('SmartGrow'),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: AppTheme.space4),
+          child: ValueListenableBuilder<int>(
+            valueListenable: AlertStore.unreadCount,
+            builder: (context, unread, child) {
+              return InkResponse(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationScreen(),
+                    ),
+                  );
+                },
+                child: Badge(
+                  isLabelVisible: unread > 0,
+                  label: Text(unread > 9 ? '9+' : '$unread'),
+                  child: const Icon(
+                    Icons.notifications_none_rounded,
+                    color: Colors.white,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
 
-  Widget _body(BuildContext context, SensorData data, bool available, bool hasError) {
-    final manual = data.automationMode == AutomationMode.manual;
-    final controlsEnabled = available && manual;
-    final water = data.waterLevelStatus.isFresh(DateTime.now()) ? data.waterLevel : null;
-    final humidifierTemp = data.humidifierTempStatus.isFresh(DateTime.now()) ? data.humidifierTemperature : null;
-    return Padding(padding: const EdgeInsets.all(AppTheme.space5), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      EnvironmentStatus(isOnline: available, sensors: _sensorsFrom(data), onToggleOnline: () => _showSnack(hasError ? 'RTDB connection error' : available ? 'Live data is current' : 'ESP32 unavailable'), onSensorTap: (sensor) => _showSnack('${sensor.label}: ${sensor.value}${sensor.unit}')),
-      const SizedBox(height: AppTheme.space5), const SectionTitle(title: 'Control Panel'), const SizedBox(height: AppTheme.space5),
-      ControlPanel(temp: humidifierTemp ?? 0, waterLevel: water ?? 0, pumpActive: data.loopPumpOn ?? false, fanActive: data.baseFanOn ?? false, refillMode: _refillMode(data), isActivated: data.humidifierOn ?? false,
-        controlsEnabled: controlsEnabled, pumpPending: _pending(IotCommandTarget.loopPump), fanPending: _pending(IotCommandTarget.baseFan), refillPending: _pending(IotCommandTarget.refillPumpMode), humidifierPending: _pending(IotCommandTarget.humidifier),
-        onTempChanged: null, onWaterLevelChanged: null, onTogglePump: () => _send(IotCommandTarget.loopPump, !(data.loopPumpOn ?? false)), onToggleFan: () => _send(IotCommandTarget.baseFan, !(data.baseFanOn ?? false)), onRefillModeChanged: (mode) => _setRefillPump(data, mode), onActivate: () => _send(IotCommandTarget.humidifier, !(data.humidifierOn ?? false))),
-      if (!manual) const Padding(padding: EdgeInsets.only(top: 8), child: Text('Switch to Manual mode before controlling outputs.')),
-      if (!manual && available) Align(alignment: Alignment.centerLeft, child: TextButton(onPressed: _pending(IotCommandTarget.automationMode) ? null : () => _send(IotCommandTarget.automationMode, 'manual'), child: Text(_pending(IotCommandTarget.automationMode) ? 'Switching to Manual…' : 'Switch to Manual mode'))),
-      if (!available) const Padding(padding: EdgeInsets.only(top: 8), child: Text('ESP32 is offline or heartbeat is stale.')),
-      const SizedBox(height: AppTheme.space5), _deviceRow(data, controlsEnabled),
-      if (_error(IotCommandTarget.uvLight) != null) Text('UV command: ${_error(IotCommandTarget.uvLight)}'),
-    ]));
+  Widget _body(
+    BuildContext context,
+    SensorData data,
+    bool available,
+    bool hasError,
+  ) {
+    // There is no longer a global automatic/manual system mode.
+    // Controls are enabled when the ESP32 is online and its heartbeat is fresh.
+    final controlsEnabled = available;
+
+    final waterLevel = data.waterLevelStatus.isFresh(DateTime.now())
+        ? data.waterLevel
+        : null;
+
+    final humidifierTemperature =
+        data.humidifierTempStatus.isFresh(DateTime.now())
+        ? data.humidifierTemperature
+        : null;
+
+    return Padding(
+      padding: const EdgeInsets.all(AppTheme.space5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          EnvironmentStatus(
+            isOnline: available,
+            isWaiting: data.lastHeartbeat == null && !hasError,
+            sensors: _sensorsFrom(data),
+            onToggleOnline: () {
+              _showSnack(
+                hasError
+                    ? 'RTDB connection error'
+                    : available
+                    ? 'Live data is current'
+                    : 'ESP32 unavailable',
+              );
+            },
+            onSensorTap: (sensor) {
+              _showSnack('${sensor.label}: ${sensor.value}${sensor.unit}');
+            },
+          ),
+          const SizedBox(height: AppTheme.space3),
+          const SectionTitle(title: 'Control Panel'),
+          const SizedBox(height: AppTheme.space4),
+          ControlPanel(
+            temp: humidifierTemperature ?? 0,
+            waterLevel: waterLevel ?? 0,
+            pumpActive: data.loopPumpOn ?? false,
+            fanActive: data.baseFanOn ?? false,
+            refillMode: _refillMode(data),
+            isActivated: data.humidifierOn ?? false,
+            controlsEnabled: controlsEnabled,
+            refillPending: _pending(IotCommandTarget.refillPump),
+            humidifierPending: _pending(IotCommandTarget.humidifier),
+            onTempChanged: null,
+            onWaterLevelChanged: null,
+            onRefillModeChanged: _setRefillPumpMode,
+            onActivate: () {
+              _send(IotCommandTarget.humidifier, !(data.humidifierOn ?? false));
+            },
+            refillRunning: data.refillPump.running ?? false,
+            refillReason: data.refillPump.reason,
+            refillFault: data.refillPump.fault,
+            humidifierFault: data.statusFor('humidifier').fault,
+            pumpFault: data.statusFor('loopPump').fault,
+            fanFault: data.statusFor('baseFan').fault,
+          ),
+          if (!available)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                'ESP32 is offline. '
+                'Controls are temporarily disabled.',
+              ),
+            ),
+          const SizedBox(height: AppTheme.space5),
+          _deviceRow(data, controlsEnabled),
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              'ESP32: ${data.firmwareVersion ?? 'firmware unknown'} • '
+              'boot ${data.bootId ?? 'unknown'}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          if (_error(IotCommandTarget.uvLight) != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text('UV command: ${_error(IotCommandTarget.uvLight)}'),
+            ),
+          if (_error(IotCommandTarget.ventFan) != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Ventilation command: '
+                '${_error(IotCommandTarget.ventFan)}',
+              ),
+            ),
+          if (_error(IotCommandTarget.refillPump) != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Refill pump command: '
+                '${_error(IotCommandTarget.refillPump)}',
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   RefillMode _refillMode(SensorData data) {
@@ -200,7 +335,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Expanded(
           child: DeviceSwitchCard(
             title: 'UV Light',
-            description: 'ESP32-reported controller output.',
+            description: data.statusFor('uvLight').fault ??
+                'ESP32-reported controller output.',
             icon: Icons.wb_sunny_outlined,
             value: data.uvLightOn ?? false,
             enabled: controlsEnabled && !_pending(IotCommandTarget.uvLight),
@@ -213,7 +349,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Expanded(
           child: DeviceSwitchCard(
             title: 'Ventilation',
-            description: 'ESP32-reported ventilation fan output.',
+            description: data.statusFor('ventFan').fault ??
+                'ESP32-reported ventilation fan output.',
             icon: Icons.air_rounded,
             value: data.ventFanOn ?? false,
             enabled: controlsEnabled && !_pending(IotCommandTarget.ventFan),

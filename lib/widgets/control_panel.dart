@@ -17,15 +17,17 @@ class ControlPanel extends StatelessWidget {
   final bool isActivated;
   final ValueChanged<double>? onTempChanged;
   final ValueChanged<double>? onWaterLevelChanged;
-  final VoidCallback onTogglePump;
-  final VoidCallback onToggleFan;
   final ValueChanged<RefillMode> onRefillModeChanged;
   final VoidCallback onActivate;
   final bool controlsEnabled;
-  final bool pumpPending;
-  final bool fanPending;
   final bool refillPending;
   final bool humidifierPending;
+  final bool refillRunning;
+  final String? refillReason;
+  final String? refillFault;
+  final String? humidifierFault;
+  final String? pumpFault;
+  final String? fanFault;
 
   const ControlPanel({
     super.key,
@@ -37,15 +39,17 @@ class ControlPanel extends StatelessWidget {
     required this.isActivated,
     required this.onTempChanged,
     required this.onWaterLevelChanged,
-    required this.onTogglePump,
-    required this.onToggleFan,
     required this.onRefillModeChanged,
     required this.onActivate,
     required this.controlsEnabled,
-    required this.pumpPending,
-    required this.fanPending,
     required this.refillPending,
     required this.humidifierPending,
+    required this.refillRunning,
+    this.refillReason,
+    this.refillFault,
+    this.humidifierFault,
+    this.pumpFault,
+    this.fanFault,
   });
 
   bool get _isCritical => waterLevel <= 30;
@@ -99,23 +103,25 @@ class ControlPanel extends StatelessWidget {
                 children: [
                   Expanded(
                     child: DeviceIconTile(
-                      title: 'Pump',
-                      description: 'Controls the water circulation system.',
+                      title: 'Loop Pump',
+                      description: pumpFault ??
+                          'ESP32-controlled status only. It follows the humidifier hardware logic.',
                       icon: Icons.compare_arrows,
                       isActive: pumpActive,
-                      onTap: onTogglePump,
-                      enabled: controlsEnabled && !pumpPending,
+                      onTap: null,
+                      enabled: false,
                     ),
                   ),
                   const SizedBox(width: AppTheme.space3),
                   Expanded(
                     child: DeviceIconTile(
-                      title: 'Fan',
-                      description: 'Controls the air circulation system.',
+                      title: 'Base Fan',
+                      description: fanFault ??
+                          'ESP32-controlled status only. It follows the humidifier hardware logic.',
                       icon: Icons.cyclone,
                       isActive: fanActive,
-                      onTap: onToggleFan,
-                      enabled: controlsEnabled && !fanPending,
+                      onTap: null,
+                      enabled: false,
                     ),
                   ),
                 ],
@@ -131,6 +137,22 @@ class ControlPanel extends StatelessWidget {
                 ? onRefillModeChanged
                 : null,
           ),
+          const SizedBox(height: AppTheme.space2),
+          Text(
+            'Pump: ${refillRunning ? 'Running' : 'Stopped'}'
+            '${refillReason == null ? '' : ' • $refillReason'}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          if (refillFault != null)
+            Text(
+              'Refill fault: $refillFault',
+              style: const TextStyle(color: AppTheme.danger),
+            ),
+          if (humidifierFault != null)
+            Text(
+              'Humidifier fault: $humidifierFault',
+              style: const TextStyle(color: AppTheme.danger),
+            ),
           const SizedBox(height: AppTheme.space4),
 
           // ---- Activate button ---------------------------------------------

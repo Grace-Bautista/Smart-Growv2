@@ -10,7 +10,7 @@ class IotCommandService extends ChangeNotifier {
   IotCommandService({FirebaseDatabase? database, this.deviceId = 'smartGrow01'})
     : _database = database ?? FirebaseDatabase.instance;
   static final instance = IotCommandService();
-  static const int ttlMs = 5000;
+  static const int ttlMs = 30000;
   final FirebaseDatabase _database;
   final String deviceId;
   final Map<IotCommandTarget, IotCommandState> _states = {};
@@ -23,11 +23,18 @@ class IotCommandService extends ChangeNotifier {
   bool isPending(IotCommandTarget target) {
     final state = stateFor(target);
     return _submitting.contains(target) ||
-        (state.status.name == 'pending' &&
-            !state.isObjectivelyExpired(DateTime.now()));
+        (state.isInProgress && !state.isObjectivelyExpired(DateTime.now()));
   }
 
-  String? errorFor(IotCommandTarget target) => _states[target]?.errorCode;
+  String? errorFor(IotCommandTarget target) {
+    final state = _states[target];
+    if (state == null) return null;
+    if (state.isObjectivelyExpired(DateTime.now())) {
+      return state.lastError ?? 'Command timed out';
+    }
+    if (!state.isFailure) return null;
+    return state.lastError ?? state.status.name;
+  }
 
   void start() {
     for (final target in IotCommandTarget.values) {
@@ -46,11 +53,12 @@ class IotCommandService extends ChangeNotifier {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) throw StateError('Authentication is required.');
       await _database
-          .ref('deviceCommands/$deviceId/components/${target.commandComponent}')
+          .ref('deviceCommands/$deviceId/components/${target.path}')
           .set({
             'commandId': _uuid(),
-            target.acceptsBoolean ? 'desiredState' : 'desiredMode':
-                desiredValue,
+            'desired': target.acceptsBoolean
+                ? desiredValue
+                : <String, Object>{'mode': desiredValue},
             'requestedBy': uid,
             'issuedAt': ServerValue.timestamp,
             'ttlMs': ttlMs,
@@ -65,7 +73,7 @@ class IotCommandService extends ChangeNotifier {
   void _watch(IotCommandTarget target) {
     if (_subscriptions.containsKey(target)) return;
     _subscriptions[target] = _database
-        .ref('deviceCommands/$deviceId/components/${target.commandComponent}')
+          .ref('deviceCommands/$deviceId/components/${target.path}')
         .onValue
         .listen((event) {
           _states[target] = IotCommandState.fromRealtimeValue(
@@ -88,8 +96,6 @@ class IotCommandService extends ChangeNotifier {
         'desiredValue',
         'A mode string is required.',
       );
-    if (target == IotCommandTarget.automationMode)
-      throw UnsupportedError('There is no global automation mode.');
     if (!target.acceptsBoolean && !const {'auto', 'on', 'off'}.contains(value))
       throw ArgumentError.value(value, 'desiredValue', 'Use auto, on, or off.');
   }

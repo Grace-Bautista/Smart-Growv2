@@ -1,19 +1,41 @@
-enum AutomationMode { automatic, manual, unknown }
-
-enum CommandStatus { pending, applied, failed, unknown }
+const Duration deviceHeartbeatTimeout = Duration(seconds: 45);
 
 class SensorReadingStatus {
   const SensorReadingStatus({this.valid, this.updatedAt});
-
   final bool? valid;
   final DateTime? updatedAt;
 
   bool isFresh(DateTime now, {Duration maxAge = const Duration(seconds: 45)}) {
-    final timestamp = updatedAt;
+    // Status metadata is optional in the final contract. A missing status does
+    // not hide an otherwise valid live reading.
+    if (valid == null && updatedAt == null) return true;
     return valid == true &&
-        timestamp != null &&
-        now.difference(timestamp) <= maxAge;
+        updatedAt != null &&
+        now.difference(updatedAt!) <= maxAge;
   }
+}
+
+class ComponentStatus {
+  const ComponentStatus({this.updatedAt, this.fault});
+  final DateTime? updatedAt;
+  final String? fault;
+}
+
+class RefillPumpState {
+  const RefillPumpState({
+    this.mode,
+    this.running,
+    this.reason,
+    this.startedAt,
+    this.lastChangedAt,
+    this.fault,
+  });
+  final String? mode;
+  final bool? running;
+  final String? reason;
+  final DateTime? startedAt;
+  final DateTime? lastChangedAt;
+  final String? fault;
 }
 
 /// Typed RTDB state for `liveData/smartGrow01`.
@@ -32,42 +54,39 @@ class SensorData {
     this.humidifierOn,
     this.ventFanOn,
     this.baseFanOn,
-    this.refillPumpOn,
     this.loopPumpOn,
     this.uvLightOn,
-    this.automationMode = AutomationMode.unknown,
-    this.refillPumpMode = AutomationMode.unknown,
+    this.refillPump = const RefillPumpState(),
+    this.componentStatuses = const {},
     this.deviceOnline,
     this.lastHeartbeat,
     this.bootId,
+    this.firmwareVersion,
   });
 
-  final double? environmentTemperature;
-  final double? humidity;
-  final double? co2;
-  final double? waterLevel;
+  final double? environmentTemperature, humidity, co2, waterLevel;
   final double? humidifierTemperature;
-  final SensorReadingStatus environmentTempStatus;
-  final SensorReadingStatus humidityStatus;
-  final SensorReadingStatus co2Status;
-  final SensorReadingStatus waterLevelStatus;
-  final SensorReadingStatus humidifierTempStatus;
-  final bool? humidifierOn;
-  final bool? ventFanOn;
-  final bool? baseFanOn;
-  final bool? refillPumpOn;
-  final bool? loopPumpOn;
-  final bool? uvLightOn;
-  final AutomationMode automationMode;
-  final AutomationMode refillPumpMode;
+  final SensorReadingStatus environmentTempStatus, humidityStatus, co2Status;
+  final SensorReadingStatus waterLevelStatus, humidifierTempStatus;
+  final bool? humidifierOn, ventFanOn, baseFanOn, loopPumpOn, uvLightOn;
+  final RefillPumpState refillPump;
+  final Map<String, ComponentStatus> componentStatuses;
   final bool? deviceOnline;
   final DateTime? lastHeartbeat;
-  final String? bootId;
+  final String? bootId, firmwareVersion;
+
+  // Compatibility for existing diagnostics/settings screens.
+  bool? get refillPumpOn => refillPump.running;
+  String get refillPumpMode => refillPump.mode ?? 'unknown';
+
+  ComponentStatus statusFor(String component) =>
+      componentStatuses[component] ?? const ComponentStatus();
 
   bool isDeviceAvailable(DateTime now) {
     final heartbeat = lastHeartbeat;
-    return heartbeat != null &&
-        now.difference(heartbeat) <= const Duration(seconds: 45);
+    if (deviceOnline != true || heartbeat == null) return false;
+    final age = now.difference(heartbeat);
+    return !age.isNegative && age <= deviceHeartbeatTimeout;
   }
 
   factory SensorData.fromRealtimeValue(Object? value) {
@@ -75,8 +94,17 @@ class SensorData {
     final sensors = _asMap(root['sensors']);
     final statuses = _asMap(root['sensorStatus']);
     final components = _asMap(root['components']);
-    final automation = _asMap(root['automation']);
+    final componentStatus = _asMap(root['componentStatus']);
     final device = _asMap(root['device']);
+    final refill = _asMap(components['refillPump']);
+    final parsedStatuses = <String, ComponentStatus>{};
+    for (final name in ['humidifier', 'uvLight', 'ventFan', 'baseFan', 'loopPump']) {
+      final status = _asMap(componentStatus[name]);
+      parsedStatuses[name] = ComponentStatus(
+        updatedAt: _asDateTime(status['updatedAt']),
+        fault: _nullableString(status['fault']),
+      );
+    }
     return SensorData(
       environmentTemperature: _asDouble(sensors['environmentTemp']),
       humidity: _asDouble(sensors['humidity']),
@@ -91,14 +119,21 @@ class SensorData {
       humidifierOn: _asBool(components['humidifier']),
       ventFanOn: _asBool(components['ventFan']),
       baseFanOn: _asBool(components['baseFan']),
-      refillPumpOn: _asBool(components['refillPump']),
       loopPumpOn: _asBool(components['loopPump']),
       uvLightOn: _asBool(components['uvLight']),
-      automationMode: _automationMode(automation['mode']),
-      refillPumpMode: _automationMode(automation['refillPumpMode']),
+      refillPump: RefillPumpState(
+        mode: _nullableString(refill['mode']),
+        running: _asBool(refill['running']),
+        reason: _nullableString(refill['reason']),
+        startedAt: _asDateTime(refill['startedAt']),
+        lastChangedAt: _asDateTime(refill['lastChangedAt']),
+        fault: _nullableString(refill['fault']),
+      ),
+      componentStatuses: parsedStatuses,
       deviceOnline: _asBool(device['online']),
       lastHeartbeat: _asDateTime(device['lastHeartbeat']),
-      bootId: device['bootId']?.toString(),
+      bootId: _nullableString(device['bootId']),
+      firmwareVersion: _nullableString(device['firmwareVersion']),
     );
   }
 
@@ -109,33 +144,16 @@ class SensorData {
       updatedAt: _asDateTime(status['updatedAt']),
     );
   }
-
   static Map<Object?, Object?> _asMap(Object? value) =>
       value is Map ? Map<Object?, Object?>.from(value) : const {};
-  static double? _asDouble(Object? value) => value is num
-      ? value.toDouble()
-      : double.tryParse(value?.toString() ?? '');
-  static bool? _asBool(Object? value) {
-    if (value is bool) return value;
-    if (value is num) return value != 0;
-    switch (value?.toString().toLowerCase()) {
-      case 'true':
-      case '1':
-        return true;
-      case 'false':
-      case '0':
-        return false;
-      default:
-        return null;
-    }
+  static double? _asDouble(Object? value) =>
+      value is num ? value.toDouble() : double.tryParse(value?.toString() ?? '');
+  static bool? _asBool(Object? value) => value is bool ? value : null;
+  static DateTime? _asDateTime(Object? value) => value is num
+      ? DateTime.fromMillisecondsSinceEpoch(value.toInt())
+      : null;
+  static String? _nullableString(Object? value) {
+    final text = value?.toString().trim();
+    return text == null || text.isEmpty ? null : text;
   }
-
-  static DateTime? _asDateTime(Object? value) =>
-      value is num ? DateTime.fromMillisecondsSinceEpoch(value.toInt()) : null;
-  static AutomationMode _automationMode(Object? value) =>
-      switch (value?.toString().toLowerCase()) {
-        'automatic' => AutomationMode.automatic,
-        'manual' => AutomationMode.manual,
-        _ => AutomationMode.unknown,
-      };
 }
