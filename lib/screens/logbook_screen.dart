@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:smart_grow_code/custom_header_button.dart';
-import 'package:smart_grow_code/harvestlogs_screen.dart';
+import 'package:smart_grow_code/screens/harvestlogs_screen.dart';
 import 'package:smart_grow_code/logs/models/sensor_history_record.dart';
 import 'package:smart_grow_code/logs/models/system_event_log.dart';
 import 'package:smart_grow_code/logs/repositories/logbook_repository.dart';
