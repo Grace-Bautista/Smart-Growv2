@@ -211,7 +211,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _showSnack('${sensor.label}: ${sensor.value}${sensor.unit}'),
           ),
           const SizedBox(height: AppTheme.space5),
-          const SectionTitle(title: 'Control Panel'),
+          Row(
+            children: [
+              Expanded(child: Divider(color: AppTheme.divider)),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppTheme.space3,
+                ),
+                child: Text(
+                  'Control Panel',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ),
+              Expanded(child: Divider(color: AppTheme.divider)),
+            ],
+          ),
           const SizedBox(height: AppTheme.space5),
           ControlPanel(
             temp: humidifierTemp ?? 0,
@@ -276,7 +294,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
     return (data.refillPumpOn ?? false) ? RefillMode.on : RefillMode.off;
   }
- 
+
   Future<void> _setRefillPumpMode(RefillMode mode) {
     final desiredMode = switch (mode) {
       RefillMode.auto => 'auto',
