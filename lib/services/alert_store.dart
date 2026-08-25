@@ -6,11 +6,7 @@ import 'package:hive/hive.dart';
 /// Used by the UI for styling/prioritization and by the notification
 /// monitor to determine whether an alert should also trigger an
 /// Android local notification.
-enum AlertSeverity {
-  info,
-  warning,
-  critical,
-}
+enum AlertSeverity { info, warning, critical }
 
 /// Stores Smart-Grow alerts locally using Hive.
 ///
@@ -116,10 +112,7 @@ class AlertStore {
     return entries.map((entry) {
       final map = Map<String, dynamic>.from(entry.value as Map);
 
-      return {
-        ...map,
-        '_key': entry.key,
-      };
+      return {...map, '_key': entry.key};
     }).toList();
   }
 
@@ -263,51 +256,42 @@ class AlertStore {
   ) {
     final now = DateTime.now();
 
-    final today = DateTime(
-      now.year,
-      now.month,
-      now.day,
-    );
+    final today = DateTime(now.year, now.month, now.day);
 
-    final yesterday = today.subtract(
-      const Duration(days: 1),
-    );
+    final yesterday = today.subtract(const Duration(days: 1));
 
-    final grouped = <String, List<Map<String, dynamic>>>{
-      'Today': [],
-      'Yesterday': [],
-      'Earlier': [],
-    };
+    final grouped = <String, List<Map<String, dynamic>>>{};
 
     for (final item in items) {
       final rawTimestamp = item['timestamp'];
 
       if (rawTimestamp == null) {
-        grouped['Earlier']!.add(item);
+        grouped.putIfAbsent('Undated', () => []).add(item);
         continue;
       }
 
-      final timestamp = DateTime.tryParse(
-        rawTimestamp.toString(),
-      );
+      final timestamp = DateTime.tryParse(rawTimestamp.toString());
 
       if (timestamp == null) {
-        grouped['Earlier']!.add(item);
+        grouped.putIfAbsent('Undated', () => []).add(item);
         continue;
       }
 
-      final day = DateTime(
-        timestamp.year,
-        timestamp.month,
-        timestamp.day,
-      );
+      final day = DateTime(timestamp.year, timestamp.month, timestamp.day);
 
       if (day == today) {
-        grouped['Today']!.add(item);
+        grouped.putIfAbsent('Today', () => []).add(item);
       } else if (day == yesterday) {
-        grouped['Yesterday']!.add(item);
+        grouped.putIfAbsent('Yesterday', () => []).add(item);
       } else {
-        grouped['Earlier']!.add(item);
+        // Use an ISO date as the group key.
+        // This makes the groups easy to sort chronologically.
+        final dateKey =
+            '${day.year.toString().padLeft(4, '0')}-'
+            '${day.month.toString().padLeft(2, '0')}-'
+            '${day.day.toString().padLeft(2, '0')}';
+
+        grouped.putIfAbsent(dateKey, () => []).add(item);
       }
     }
 

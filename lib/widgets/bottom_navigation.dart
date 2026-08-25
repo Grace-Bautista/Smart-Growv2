@@ -107,7 +107,9 @@ class _NavIcon extends StatelessWidget {
         padding: const EdgeInsets.all(AppTheme.space2),
         child: Icon(
           icon,
-          color: selected ? Colors.white : Colors.white.withOpacity(0.75),
+          color: selected
+              ? Colors.white
+              : Colors.white.withValues(alpha: 0.75),
           size: 24,
         ),
       ),
@@ -146,7 +148,7 @@ class _PowerButtonState extends State<_PowerButton> {
             border: Border.all(color: Colors.white, width: 3),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.success.withOpacity(0.5),
+                color: AppTheme.success.withValues(alpha: 0.5),
                 blurRadius: _hovering ? 18 : 10,
                 spreadRadius: 1,
               ),

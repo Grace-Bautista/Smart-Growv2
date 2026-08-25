@@ -65,7 +65,7 @@ class SliderTile extends StatelessWidget {
                     overlayRadius: 18,
                   ),
                   thumbColor: activeColor,
-                  overlayColor: activeColor.withOpacity(0.15),
+                  overlayColor: activeColor.withValues(alpha: 0.15),
                   trackShape: const RoundedRectSliderTrackShape(),
                 ),
                 child: Slider(

@@ -6,6 +6,7 @@ import '../models/iot_command.dart';
 import '../models/sensor.dart';
 import '../models/sensor_data.dart';
 import '../services/alert_store.dart';
+import '../services/esp32_service.dart';
 import '../services/iot_command_service.dart';
 import '../services/sensor_service.dart';
 import '../theme/app_theme.dart';
@@ -26,13 +27,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final SensorService _liveData = SensorService.instance;
   final IotCommandService _commands = IotCommandService.instance;
 
+  late final Stream<SensorData> _liveDataStream;
+
   int _navIndex = 0;
+
+  // Rebuilds periodically so heartbeat freshness can be re-evaluated
+  // even when no new RTDB event arrives.
   Timer? _heartbeatTimer;
 
   @override
   void initState() {
     super.initState();
 
+    _liveDataStream = _liveData.watchLiveData();
     _commands.addListener(_rebuild);
     _commands.start();
     _heartbeatTimer = Timer.periodic(
@@ -43,8 +50,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
-    _commands.removeListener(_rebuild);
     _heartbeatTimer?.cancel();
+    _commands.removeListener(_rebuild);
+
     super.dispose();
   }
 
@@ -53,6 +61,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {});
     }
   }
+
+  // ============================================================
+  // SENSOR CARDS
+  // ============================================================
 
   List<Sensor> _sensorsFrom(SensorData data) {
     String reading(double? value, SensorReadingStatus status, int decimals) {
@@ -90,6 +102,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ];
   }
 
+  // ============================================================
+  // SNACKBAR
+  // ============================================================
+
   void _showSnack(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -101,6 +117,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       );
   }
+
+  // ============================================================
+  // COMMANDS
+  // ============================================================
 
   Future<void> _send(IotCommandTarget target, Object value) async {
     try {
@@ -120,42 +140,74 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return _commands.errorFor(target);
   }
 
+  // ============================================================
+  // BUILD
+  // ============================================================
+
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<SensorData>(
-      stream: _liveData.watchLiveData(),
-      builder: (context, snapshot) {
-        final data = snapshot.data ?? const SensorData();
-        final available = data.isDeviceAvailable(DateTime.now());
+    return ValueListenableBuilder<bool>(
+      valueListenable: Esp32Service.instance.isOnline,
+      builder: (context, espOnline, _) => StreamBuilder<SensorData>(
+        stream: _liveDataStream,
+        builder: (context, snapshot) {
+          final data = snapshot.data ?? const SensorData();
 
-        return Scaffold(
-          body: CustomScrollView(
-            slivers: [
-              _header(context),
-              SliverToBoxAdapter(
-                child: _body(context, data, available, snapshot.hasError),
-              ),
-            ],
-          ),
-          bottomNavigationBar: SmartGrowBottomNav(
-            selectedIndex: _navIndex,
-            onTap: (index) {
-              setState(() {
-                _navIndex = index;
-              });
-            },
-            onPowerTap: () {
-              _showSnack(
-                available
-                    ? 'Receiving live RTDB data'
-                    : 'ESP32 heartbeat is stale',
-              );
-            },
-          ),
-        );
-      },
+        // --------------------------------------------------------
+        // REAL DEVICE AVAILABILITY
+        // --------------------------------------------------------
+        //
+        // Keep this unchanged.
+        //
+        // This continues to control actual application behaviour
+        // such as enabling/disabling commands.
+        //
+          final available = data.isDeviceAvailable(DateTime.now());
+
+          return Scaffold(
+            body: CustomScrollView(
+              slivers: [
+                _header(context),
+
+                SliverToBoxAdapter(
+                  child: _body(
+                    context,
+                    data,
+                    available,
+                    espOnline,
+                    snapshot.hasError,
+                  ),
+                ),
+              ],
+            ),
+
+            bottomNavigationBar: SmartGrowBottomNav(
+              selectedIndex: _navIndex,
+
+              onTap: (index) {
+                setState(() {
+                  _navIndex = index;
+                });
+              },
+
+              onPowerTap: () {
+                // Keep this based on the REAL availability state.
+                _showSnack(
+                  available
+                      ? 'Receiving live RTDB data'
+                      : 'ESP32 heartbeat is stale',
+                );
+              },
+            ),
+          );
+        },
+      ),
     );
   }
+
+  // ============================================================
+  // HEADER
+  // ============================================================
 
   Widget _header(BuildContext context) {
     return SliverAppBar(
@@ -163,11 +215,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       floating: true,
       backgroundColor: AppTheme.primary,
       title: const Text('SmartGrow'),
+
       actions: [
         Padding(
           padding: const EdgeInsets.only(right: AppTheme.space4),
           child: ValueListenableBuilder<int>(
             valueListenable: AlertStore.unreadCount,
+
             builder: (context, unread, child) {
               return InkResponse(
                 onTap: () {
@@ -178,6 +232,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   );
                 },
+
                 child: Badge(
                   isLabelVisible: unread > 0,
                   label: Text(unread > 9 ? '9+' : '$unread'),
@@ -194,23 +249,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // ============================================================
+  // DASHBOARD BODY
+  // ============================================================
+
   Widget _body(
     BuildContext context,
     SensorData data,
     bool available,
+    bool uiEspOnline,
     bool hasError,
   ) {
-    // There is no longer a global automatic/manual system mode.
-    // Controls are enabled when the ESP32 is online and its heartbeat is fresh.
+    // ------------------------------------------------------------
+    // REAL CONTROL AVAILABILITY
+    // ------------------------------------------------------------
+    //
+    // IMPORTANT:
+    // This deliberately uses "available", NOT "uiEspOnline".
+    //
+    // The UI heartbeat smoothing must never affect whether commands
+    // can actually be sent.
+    //
     final controlsEnabled = available;
 
+    final waitingForHeartbeat = data.lastHeartbeat == null && !hasError;
+
+    // ------------------------------------------------------------
+    // SENSOR DATA
+    // ------------------------------------------------------------
+    //
+    // Sensor freshness remains independent from the UI connection
+    // indicator.
+    //
     final waterLevel = data.waterLevelStatus.isFresh(DateTime.now())
         ? data.waterLevel
         : null;
 
-    final humidifierTemperature =
-        data.humidifierTempStatus.isFresh(DateTime.now())
-        ? data.humidifierTemperature
+    final environmentTemperature =
+        data.environmentTempStatus.isFresh(DateTime.now())
+        ? data.environmentTemperature
         : null;
 
     return Padding(
@@ -218,72 +295,123 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // ======================================================
+          // ENVIRONMENT STATUS
+          // ======================================================
           EnvironmentStatus(
-            isOnline: available,
-            isWaiting: data.lastHeartbeat == null && !hasError,
+            // UI-only smoothed connection status.
+            isOnline: uiEspOnline,
+
+            isWaiting: waitingForHeartbeat,
+
+            // Sensor values remain real-time.
             sensors: _sensorsFrom(data),
+
             onToggleOnline: () {
               _showSnack(
                 hasError
                     ? 'RTDB connection error'
-                    : available
-                    ? 'Live data is current'
-                    : 'ESP32 unavailable',
+                    : uiEspOnline
+                    ? 'ESP32 connection is online'
+                    : 'ESP32 connection appears offline',
               );
             },
+
             onSensorTap: (sensor) {
-              _showSnack('${sensor.label}: ${sensor.value}${sensor.unit}');
+              _showSnack(
+                '${sensor.label}: '
+                '${sensor.value}${sensor.unit}',
+              );
             },
           ),
+
           const SizedBox(height: AppTheme.space3),
+
           const SectionTitle(title: 'Control Panel'),
+
           const SizedBox(height: AppTheme.space4),
+
+          // ======================================================
+          // CONTROL PANEL
+          // ======================================================
           ControlPanel(
-            temp: humidifierTemperature ?? 0,
+            temp: environmentTemperature ?? 0,
             waterLevel: waterLevel ?? 0,
+
             pumpActive: data.loopPumpOn ?? false,
+
             fanActive: data.baseFanOn ?? false,
+
             refillMode: _refillMode(data),
+
             isActivated: data.humidifierOn ?? false,
+
+            // Uses REAL device availability.
             controlsEnabled: controlsEnabled,
+
             refillPending: _pending(IotCommandTarget.refillPump),
+
             humidifierPending: _pending(IotCommandTarget.humidifier),
+
             onTempChanged: null,
             onWaterLevelChanged: null,
+
             onRefillModeChanged: _setRefillPumpMode,
+
             onActivate: () {
               _send(IotCommandTarget.humidifier, !(data.humidifierOn ?? false));
             },
+
             refillRunning: data.refillPump.running ?? false,
+
             refillReason: data.refillPump.reason,
+
             refillFault: data.refillPump.fault,
+
             humidifierFault: data.statusFor('humidifier').fault,
+
             pumpFault: data.statusFor('loopPump').fault,
+
             fanFault: data.statusFor('baseFan').fault,
           ),
-          if (!available)
+
+          // ======================================================
+          // UI-ONLY OFFLINE MESSAGE
+          // ======================================================
+          //
+          // This uses uiEspOnline rather than "available".
+          //
+          // It therefore gets the heartbeat grace period without
+          // affecting sensor or command behaviour.
+          //
+          if (!uiEspOnline && !waitingForHeartbeat)
             const Padding(
               padding: EdgeInsets.only(top: 8),
               child: Text(
                 'ESP32 is offline. '
-                'Controls are temporarily disabled.',
+                'Waiting for a fresh heartbeat.',
               ),
             ),
+
           const SizedBox(height: AppTheme.space5),
+
+          // ======================================================
+          // DEVICE CONTROLS
+          // ======================================================
           _deviceRow(data, controlsEnabled),
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              'ESP32: ${data.firmwareVersion ?? 'firmware unknown'} • '
-              'boot ${data.bootId ?? 'unknown'}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
+
+          // ======================================================
+          // COMMAND ERRORS
+          // ======================================================
           if (_error(IotCommandTarget.uvLight) != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text('UV command: ${_error(IotCommandTarget.uvLight)}'),
+              child: Text(
+                'UV command: '
+                '${_error(IotCommandTarget.uvLight)}',
+              ),
             ),
+
           if (_error(IotCommandTarget.ventFan) != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -292,6 +420,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 '${_error(IotCommandTarget.ventFan)}',
               ),
             ),
+
           if (_error(IotCommandTarget.refillPump) != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -304,6 +433,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+
+  // ============================================================
+  // REFILL PUMP MODE
+  // ============================================================
 
   RefillMode _refillMode(SensorData data) {
     switch (data.refillPumpMode) {
@@ -329,31 +462,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return _send(IotCommandTarget.refillPump, desiredMode);
   }
 
+  // ============================================================
+  // DEVICE ROW
+  // ============================================================
+
   Widget _deviceRow(SensorData data, bool controlsEnabled) {
     return Row(
       children: [
         Expanded(
           child: DeviceSwitchCard(
             title: 'UV Light',
-            description: data.statusFor('uvLight').fault ??
+
+            description:
+                data.statusFor('uvLight').fault ??
                 'ESP32-reported controller output.',
+
             icon: Icons.wb_sunny_outlined,
+
+            // Actual ESP32-reported value.
             value: data.uvLightOn ?? false,
+
+            // Actual device availability.
             enabled: controlsEnabled && !_pending(IotCommandTarget.uvLight),
+
             onChanged: (value) {
               _send(IotCommandTarget.uvLight, value);
             },
           ),
         ),
+
         const SizedBox(width: AppTheme.space3),
+
         Expanded(
           child: DeviceSwitchCard(
             title: 'Ventilation',
-            description: data.statusFor('ventFan').fault ??
+
+            description:
+                data.statusFor('ventFan').fault ??
                 'ESP32-reported ventilation fan output.',
+
             icon: Icons.air_rounded,
+
+            // Actual ESP32-reported value.
             value: data.ventFanOn ?? false,
+
+            // Actual device availability.
             enabled: controlsEnabled && !_pending(IotCommandTarget.ventFan),
+
             onChanged: (value) {
               _send(IotCommandTarget.ventFan, value);
             },

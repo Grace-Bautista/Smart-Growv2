@@ -1,231 +1,188 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
 
-import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 
-class Esp32Snapshot {
-  const Esp32Snapshot({
-    required this.connected,
-    required this.powerOn,
-    required this.fanOn,
-    required this.fanMode,
-    required this.pumpOn,
-    required this.uvOn,
-    required this.waterPresent,
-    required this.sensorOnline,
-    this.temperature,
-    this.humidity,
-    this.co2,
-  });
+import '../models/sensor_data.dart';
+import 'sensor_service.dart';
 
-  final bool connected;
-  final bool powerOn;
-  final bool fanOn;
-  final String fanMode;
-  final bool pumpOn;
-  final bool uvOn;
-  final bool waterPresent;
-  final bool sensorOnline;
-  final double? temperature;
-  final double? humidity;
-  final int? co2;
+enum EspConnectionState { unknown, offline, online }
 
-  bool get humidifierOn => pumpOn;
-
-  bool get hasSensorData =>
-      temperature != null || humidity != null || co2 != null;
-
-  factory Esp32Snapshot.offline() {
-    return const Esp32Snapshot(
-      connected: false,
-      powerOn: false,
-      fanOn: false,
-      fanMode: 'manual',
-      pumpOn: false,
-      uvOn: false,
-      waterPresent: false,
-      sensorOnline: false,
-    );
-  }
-
-  factory Esp32Snapshot.fromJson(Map<String, dynamic> json) {
-    return Esp32Snapshot(
-      connected: true,
-      powerOn: _readBool(json['power']),
-      fanOn: _readBool(json['fan']),
-      fanMode: (json['fanMode'] ?? 'manual').toString().toLowerCase(),
-      pumpOn: _readBool(json['pump'] ?? json['humidifier']),
-      uvOn: _readBool(json['uv']),
-      waterPresent: _readBool(json['water']),
-      sensorOnline: _readBool(json['sensorOnline']),
-      temperature: _readDouble(json['temperature'] ?? json['temp']),
-      humidity: _readDouble(json['humidity']),
-      co2: _readInt(json['co2']),
-    );
-  }
-}
-
+/// Shared ESP32 connection-state service.
+///
+/// This is the single source of truth for the ESP32 Online/Offline
+/// state used by:
+///
+/// - Dashboard
+/// - Settings
+/// - Notifications
+///
+/// ESP32 currently sends a heartbeat every 5 seconds.
+///
+/// A fresh heartbeat marks the ESP32 Online immediately.
+/// If no new heartbeat arrives for 11 seconds, the shared
+/// connection state becomes Offline.
+///
+/// This service does NOT control sensor readings or commands.
 class Esp32Service {
-  static const String baseUrl = 'http://192.168.4.1';
-  static const Duration _timeout = Duration(seconds: 2);
+  Esp32Service._();
 
-  static Future<Esp32Snapshot> readSnapshot() async {
-    try {
-      final json = await _getJson('/status');
-      return Esp32Snapshot.fromJson(json);
-    } catch (_) {
-      return Esp32Snapshot.offline();
+  static final Esp32Service instance = Esp32Service._();
+
+  final SensorService _sensorService = SensorService.instance;
+
+  // ============================================================
+  // SHARED CONNECTION STATE
+  // ============================================================
+
+  final ValueNotifier<bool> isOnline = ValueNotifier<bool>(false);
+
+  /// Includes the initial synchronization state so notification consumers can
+  /// distinguish "not evaluated yet" from a genuine Offline state.
+  final ValueNotifier<EspConnectionState> connectionState =
+      ValueNotifier<EspConnectionState>(EspConnectionState.unknown);
+
+  StreamSubscription<SensorData>? _subscription;
+
+  Timer? _offlineTimer;
+
+  DateTime? _lastHeartbeatSeen;
+
+  bool _started = false;
+
+  // ESP heartbeat = every 5 seconds.
+  // Allow roughly two missed heartbeats before showing Offline.
+  static const Duration offlineTimeout = Duration(seconds: 11);
+
+  // ============================================================
+  // START
+  // ============================================================
+
+  void start() {
+    if (_started) {
+      return;
     }
-  }
 
-  static Future<double> readTemperature() async {
-    final json = await _getJson('/temperature');
-    final value = _readDouble(json['temperature']);
-    if (value == null) {
-      throw Exception('Temperature unavailable');
-    }
-    return value;
-  }
+    _started = true;
 
-  static Future<double> readHumidity() async {
-    final json = await _getJson('/humidity');
-    final value = _readDouble(json['humidity']);
-    if (value == null) {
-      throw Exception('Humidity unavailable');
-    }
-    return value;
-  }
-
-  static Future<int> readCO2() async {
-    final json = await _getJson('/co2');
-    final value = _readInt(json['co2']);
-    if (value == null) {
-      throw Exception('CO2 unavailable');
-    }
-    return value;
-  }
-
-  static Future<bool> isWaterPresent() async {
-    final json = await _getJson('/water');
-    return _readBool(json['water']);
-  }
-
-  static Future<bool> fanOn() => _sendToggle('/fan/on');
-
-  static Future<bool> fanOff() => _sendToggle('/fan/off');
-
-  static Future<bool> getFanStatus() async {
-    final json = await _getJson('/fan/status');
-    return _readBool(json['fan']);
-  }
-
-  static Future<String> getFanMode() async {
-    final json = await _getJson('/fan/status');
-    return (json['mode'] ?? 'manual').toString().toLowerCase();
-  }
-
-  static Future<bool> setFanModeAuto() => _sendToggle('/fan/mode/auto');
-
-  static Future<bool> setFanModeManual() => _sendToggle('/fan/mode/manual');
-
-  static Future<bool> humidifierOn() => _sendToggle('/humidifier/on');
-
-  static Future<bool> humidifierOff() => _sendToggle('/humidifier/off');
-
-  static Future<bool> getHumidifierStatus() async {
-    final json = await _getJson('/humidifier/status');
-    return _readBool(json['humidifier']);
-  }
-
-  static Future<bool> uvOn() => _sendToggle('/uv/on');
-
-  static Future<bool> uvOff() => _sendToggle('/uv/off');
-
-  static Future<bool> getUvStatus() async {
-    final json = await _getJson('/uv/status');
-    return _readBool(json['uv']);
-  }
-
-  static Future<bool> isConnected() async {
-    try {
-      final response = await http
-          .get(Uri.parse('$baseUrl/ping'))
-          .timeout(const Duration(seconds: 1));
-      return response.statusCode == 200;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  static Future<bool> powerRailOn() => _sendToggle('/power/on');
-
-  static Future<bool> powerRailOff() => _sendToggle('/power/off');
-
-  static Future<bool> getPowerStatus() async {
-    final json = await _getJson('/power/status');
-    return _readBool(json['power']);
-  }
-
-  static Future<Map<String, dynamic>> _getJson(String path) async {
-    try {
-      final response = await http
-          .get(Uri.parse('$baseUrl$path'))
-          .timeout(_timeout);
-
-      if (response.statusCode != 200) {
-        throw HttpException(
-          'ESP32 request failed (${response.statusCode})',
-          uri: Uri.parse('$baseUrl$path'),
+    _subscription = _sensorService.watchLiveData().listen(
+      _handleLiveData,
+      onError: (Object error) {
+        debugPrint(
+          'Esp32Service RTDB connection error: $error',
         );
-      }
+      },
+    );
+  }
 
-      final decoded = jsonDecode(response.body);
-      if (decoded is! Map<String, dynamic>) {
-        throw const FormatException('ESP32 response is not a JSON object');
-      }
+  // ============================================================
+  // LIVE DATA
+  // ============================================================
 
-      return decoded;
-    } on TimeoutException {
-      throw Exception('ESP32 request timeout for $path');
-    } on SocketException {
-      throw Exception('ESP32 offline');
-    } on FormatException catch (_) {
-      throw Exception('Invalid response from $path');
+  void _handleLiveData(SensorData data) {
+    final heartbeat = data.lastHeartbeat;
+
+    if (heartbeat == null) {
+      return;
     }
-  }
 
-  static Future<bool> _sendToggle(String path) async {
-    try {
-      await _getJson(path);
-      return true;
-    } catch (_) {
-      return false;
+    // RTDB may update sensors/components between heartbeats.
+    //
+    // Only a genuinely NEW heartbeat is allowed to reset
+    // the offline watchdog.
+    if (_lastHeartbeatSeen == heartbeat) {
+      return;
     }
+
+    _lastHeartbeatSeen = heartbeat;
+
+    // New heartbeat received.
+    _offlineTimer?.cancel();
+    _offlineTimer = null;
+
+    final heartbeatAge =
+        DateTime.now().difference(heartbeat);
+
+    // ----------------------------------------------------------
+    // ALREADY STALE
+    // ----------------------------------------------------------
+
+    if (!heartbeatAge.isNegative &&
+        heartbeatAge >= offlineTimeout) {
+      _setConnectionState(EspConnectionState.offline);
+      return;
+    }
+
+    // ----------------------------------------------------------
+    // FRESH HEARTBEAT
+    // ----------------------------------------------------------
+
+    _setConnectionState(EspConnectionState.online);
+
+    // Account for the heartbeat already being a little old when
+    // Flutter receives it.
+    final remaining = heartbeatAge.isNegative
+        ? offlineTimeout
+        : offlineTimeout - heartbeatAge;
+
+    final watchedHeartbeat = heartbeat;
+
+    // ----------------------------------------------------------
+    // OFFLINE WATCHDOG
+    // ----------------------------------------------------------
+
+    _offlineTimer = Timer(
+      remaining,
+      () {
+        // If another heartbeat arrived, this timer belongs
+        // to an older heartbeat and must be ignored.
+        if (_lastHeartbeatSeen != watchedHeartbeat) {
+          return;
+        }
+
+        _setConnectionState(EspConnectionState.offline);
+      },
+    );
   }
-}
 
-bool _readBool(dynamic value) {
-  if (value is bool) return value;
-  if (value is num) return value != 0;
-  if (value is String) {
-    final normalized = value.toLowerCase();
-    return normalized == '1' ||
-        normalized == 'true' ||
-        normalized == 'on' ||
-        normalized == 'auto';
+  // ============================================================
+  // STATE CHANGE
+  // ============================================================
+
+  void _setConnectionState(EspConnectionState value) {
+    // Do not emit duplicate states.
+    if (connectionState.value == value) {
+      return;
+    }
+
+    final online = value == EspConnectionState.online;
+    if (isOnline.value != online) {
+      isOnline.value = online;
+    }
+
+    // Publish the complete state after the boolean view is synchronized so
+    // listeners always observe a consistent snapshot.
+    connectionState.value = value;
+
+    debugPrint(
+      'ESP32 connection: ${value.name.toUpperCase()}',
+    );
   }
-  return false;
-}
 
-double? _readDouble(dynamic value) {
-  if (value == null) return null;
-  if (value is num) return value.toDouble();
-  return double.tryParse(value.toString());
-}
+  // ============================================================
+  // STOP
+  // ============================================================
 
-int? _readInt(dynamic value) {
-  if (value == null) return null;
-  if (value is num) return value.toInt();
-  return int.tryParse(value.toString());
+  Future<void> stop() async {
+    _offlineTimer?.cancel();
+    _offlineTimer = null;
+
+    await _subscription?.cancel();
+    _subscription = null;
+
+    _lastHeartbeatSeen = null;
+
+    _setConnectionState(EspConnectionState.unknown);
+
+    _started = false;
+  }
 }

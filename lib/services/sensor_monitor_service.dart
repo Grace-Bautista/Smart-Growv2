@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:smart_grow_code/models/sensor_data.dart';
 import 'package:smart_grow_code/services/alert_store.dart';
+import 'package:smart_grow_code/services/esp32_service.dart';
 import 'package:smart_grow_code/services/push_notification_service.dart';
 import 'package:smart_grow_code/services/sensor_service.dart';
 
@@ -26,11 +27,11 @@ class SensorMonitorService {
   // ENVIRONMENT TARGETS
   // ------------------------------------------------------------
 
-  static const double tempLowC = 25.0;
-  static const double tempHighC = 28.0;
+  static const double tempLowC = 21.0;
+  static const double tempHighC = 31.0;
 
   static const double humidityLowPct = 75.0;
-  static const double humidityHighPct = 90.0;
+  static const double humidityHighPct = 96.0;
 
   /// We don't currently have a finalized numeric low-water threshold
   /// in the RTDB contract.
@@ -44,11 +45,6 @@ class SensorMonitorService {
   /// Secondary protection against duplicate alerts after app restart.
   static const Duration _cooldown = Duration(minutes: 15);
 
-  /// How often we check whether the last RTDB heartbeat has become stale.
-  ///
-  /// This does NOT contact the ESP32 or Firebase.
-  static const Duration _heartbeatCheckInterval = Duration(seconds: 10);
-
   // ------------------------------------------------------------
   // LIVE STATE
   // ------------------------------------------------------------
@@ -58,7 +54,6 @@ class SensorMonitorService {
   );
 
   static StreamSubscription<SensorData>? _subscription;
-  static Timer? _heartbeatTimer;
 
   static bool _started = false;
 
@@ -75,11 +70,16 @@ class SensorMonitorService {
   /// application restarts.
   static final Map<String, DateTime> _lastFired = <String, DateTime>{};
 
-  static bool? _previousDeviceAvailable;
+  static VoidCallback? _espConnectionListener;
+  static EspConnectionState _previousEspState = EspConnectionState.unknown;
 
   /// Keeps asynchronous evaluations in sequence so two rapid Firebase
   /// events cannot create duplicate notifications simultaneously.
   static Future<void> _evaluationQueue = Future<void>.value();
+
+  /// Connection-state alerts use their own queue so they are not
+  /// delayed behind environmental/sensor evaluations.
+  static Future<void> _connectionQueue = Future<void>.value();
 
   // ------------------------------------------------------------
   // START / STOP
@@ -90,42 +90,115 @@ class SensorMonitorService {
 
     _started = true;
 
+    // Shared stabilized ESP32 state used by Dashboard, Settings,
+    // and Notifications.
+    final esp32 = Esp32Service.instance;
+
+    esp32.start();
+
+    _previousEspState = esp32.connectionState.value;
+
+    _espConnectionListener = () {
+      _handleEspConnectionChange(esp32.connectionState.value);
+    };
+
+    esp32.connectionState.addListener(_espConnectionListener!);
+
+    // RTDB sensor/component data is still monitored normally.
     _subscription = SensorService.instance.watchLiveData().listen(
       (snapshot) {
         latest.value = snapshot;
-
         _queueEvaluation(snapshot);
       },
       onError: (Object error) {
         _queueStreamError(error);
       },
     );
-
-    // RTDB will not emit another event simply because an old heartbeat
-    // has become stale. This watchdog lets us detect that situation.
-    _heartbeatTimer = Timer.periodic(_heartbeatCheckInterval, (_) {
-      final snapshot = latest.value;
-
-      if (snapshot != null) {
-        _queueEvaluation(snapshot);
-      }
-    });
   }
 
   static Future<void> stop() async {
+    final listener = _espConnectionListener;
+
+    if (listener != null) {
+      Esp32Service.instance.connectionState.removeListener(listener);
+    }
+
+    _espConnectionListener = null;
+    _previousEspState = EspConnectionState.unknown;
+
     await _subscription?.cancel();
-
     _subscription = null;
-
-    _heartbeatTimer?.cancel();
-    _heartbeatTimer = null;
 
     _started = false;
 
     latest.value = null;
 
     _activeConditions.clear();
-    _previousDeviceAvailable = null;
+  }
+
+  // ------------------------------------------------------------
+  // SHARED ESP32 CONNECTION EVENTS
+  // ------------------------------------------------------------
+
+  static void _handleEspConnectionChange(EspConnectionState current) {
+    final previous = _previousEspState;
+
+    // Unknown -> known is initial synchronization, not a transition alert.
+    if (previous == EspConnectionState.unknown) {
+      _previousEspState = current;
+      return;
+    }
+
+    // Ignore duplicate state emissions.
+    if (previous == current || current == EspConnectionState.unknown) {
+      return;
+    }
+
+    _previousEspState = current;
+
+    if (current == EspConnectionState.online) {
+      _queueDeviceOnline();
+    } else {
+      _queueDeviceOffline();
+    }
+  }
+
+  static void _queueDeviceOffline() {
+    _connectionQueue = _connectionQueue
+        .then((_) async {
+          await _activateCondition(
+            key: 'device_offline',
+            title: 'Device Offline',
+            subtitle: 'Smart-Grow lost connection to the ESP32.',
+            iconKey: 'wifi_off',
+            colorValue: 0xFFB56576,
+            severity: AlertSeverity.critical,
+            useCooldown: false,
+          );
+        })
+        .catchError((Object error) {
+          debugPrint('ESP32 offline notification error: $error');
+        });
+  }
+
+  static void _queueDeviceOnline() {
+    _connectionQueue = _connectionQueue
+        .then((_) async {
+          _clearCondition('device_offline');
+
+          await _raiseEvent(
+            key: 'device_online',
+            title: 'Device Reconnected',
+            subtitle: 'Smart-Grow reconnected to the ESP32.',
+            iconKey: 'wifi',
+            colorValue: 0xFF2A9D8F,
+            severity: AlertSeverity.info,
+            useCooldown: false,
+          );
+        })
+        .catchError((Object error) {
+          debugPrint('ESP32 reconnect notification error: $error');
+        });
   }
 
   // ------------------------------------------------------------
@@ -184,8 +257,9 @@ class SensorMonitorService {
     required String iconKey,
     required int colorValue,
     AlertSeverity severity = AlertSeverity.warning,
+    bool useCooldown = true,
   }) async {
-    if (!_isOffCooldown(key)) {
+    if (useCooldown && !_isOffCooldown(key)) {
       return;
     }
 
@@ -214,6 +288,7 @@ class SensorMonitorService {
     required String iconKey,
     required int colorValue,
     AlertSeverity severity = AlertSeverity.warning,
+    bool useCooldown = true,
   }) async {
     if (_activeConditions.contains(key)) {
       return;
@@ -228,6 +303,7 @@ class SensorMonitorService {
       iconKey: iconKey,
       colorValue: colorValue,
       severity: severity,
+      useCooldown: useCooldown,
     );
   }
 
@@ -243,6 +319,7 @@ class SensorMonitorService {
     required String iconKey,
     required int colorValue,
     AlertSeverity severity = AlertSeverity.info,
+    bool useCooldown = true,
   }) {
     return _storeAndNotify(
       key: key,
@@ -251,6 +328,7 @@ class SensorMonitorService {
       iconKey: iconKey,
       colorValue: colorValue,
       severity: severity,
+      useCooldown: useCooldown,
     );
   }
 
@@ -297,12 +375,9 @@ class SensorMonitorService {
       );
     }
 
-    await _evaluateDevice(data, now);
-
-    final deviceAvailable = data.isDeviceAvailable(now);
-
-    // Do not evaluate environmental values from stale device data.
-    if (!deviceAvailable) {
+    // Do not evaluate environmental values while the shared,
+    // stabilized ESP32 connection state is Offline.
+    if (!Esp32Service.instance.isOnline.value) {
       return;
     }
 
@@ -315,42 +390,6 @@ class SensorMonitorService {
     await _evaluateWaterLevel(data, now);
 
     await _evaluateComponentFaults(data);
-  }
-
-  // ------------------------------------------------------------
-  // DEVICE
-  // ------------------------------------------------------------
-
-  static Future<void> _evaluateDevice(SensorData data, DateTime now) async {
-    final available = data.isDeviceAvailable(now);
-
-    if (!available) {
-      await _activateCondition(
-        key: 'device_offline',
-        title: 'Device Offline',
-        subtitle:
-            'Smart-Grow is no longer receiving a fresh heartbeat from the ESP32.',
-        iconKey: 'wifi_off',
-        colorValue: 0xFFB56576,
-        severity: AlertSeverity.critical,
-      );
-    } else {
-      _clearCondition('device_offline');
-
-      if (_previousDeviceAvailable == false) {
-        await _raiseEvent(
-          key: 'device_online',
-          title: 'Device Reconnected',
-          subtitle:
-              'The ESP32 is online and Smart-Grow is receiving fresh heartbeat data again.',
-          iconKey: 'wifi',
-          colorValue: 0xFF2A9D8F,
-          severity: AlertSeverity.info,
-        );
-      }
-    }
-
-    _previousDeviceAvailable = available;
   }
 
   // ------------------------------------------------------------
@@ -382,7 +421,8 @@ class SensorMonitorService {
       await _activateCondition(
         key: 'environment_sensor_issue',
         title: 'Environmental Sensor Issue',
-        subtitle: 'One or more SCD40 readings are missing, invalid, or stale.',
+        subtitle:
+            'One or more environmental sensor readings are missing, invalid, or stale.',
         iconKey: 'sensors_off',
         colorValue: 0xFF6D597A,
         severity: AlertSeverity.critical,
@@ -421,26 +461,6 @@ class SensorMonitorService {
       );
     } else {
       _clearCondition('water_sensor_issue');
-    }
-
-    final humidifierTempHealthy = _readingHealthy(
-      data.humidifierTempStatus,
-      data.humidifierTemperature,
-      now,
-    );
-
-    if (!humidifierTempHealthy) {
-      await _activateCondition(
-        key: 'humidifier_temp_sensor_issue',
-        title: 'Humidifier Sensor Issue',
-        subtitle:
-            'The humidifier temperature reading is missing, invalid, or stale.',
-        iconKey: 'sensors_off',
-        colorValue: 0xFF6D597A,
-        severity: AlertSeverity.warning,
-      );
-    } else {
-      _clearCondition('humidifier_temp_sensor_issue');
     }
   }
 

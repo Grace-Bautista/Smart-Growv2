@@ -57,9 +57,9 @@ class SensorTestScreen extends StatelessWidget {
                 _tile(
                   'Humidifier temperature',
                   _reading(
-                    data.humidifierTemperature,
+                    data.environmentTemperature,
                     'C',
-                    data.humidifierTempStatus,
+                    data.environmentTempStatus,
                     now,
                   ),
                 ),

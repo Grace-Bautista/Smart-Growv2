@@ -62,7 +62,8 @@ class GuidesScreen extends StatelessWidget {
         GuideSection(
           heading: 'Core modules in this project',
           bullets: [
-            'SCD40 for temperature, humidity, and CO2 tracking.',
+            'SHT30 for environmental temperature and humidity, '
+            'with a separate CO2 sensor.',
             'Water level sensing for refill decisions.',
             'Pump control for tank refill support.',
             'Fan control for stale-air removal and CO2 reduction.',

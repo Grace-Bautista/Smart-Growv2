@@ -262,7 +262,7 @@ class _ActivateButtonState extends State<_ActivateButton> {
               BoxShadow(
                 color:
                     (widget.isActivated ? AppTheme.success : AppTheme.primary)
-                        .withOpacity(_hovering ? 0.45 : 0.3),
+                        .withValues(alpha: _hovering ? 0.45 : 0.3),
                 blurRadius: _hovering ? 20 : 14,
                 offset: const Offset(0, 6),
               ),

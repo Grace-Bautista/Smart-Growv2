@@ -14,7 +14,7 @@ class ContactUsScreen extends StatelessWidget {
     final isWide = screen.width > 600;
 
     return Scaffold(
-      backgroundColor: Colors.white.withOpacity(0.9),
+      backgroundColor: Colors.white.withValues(alpha: 0.9),
       body: SafeArea(
         child: Column(
           children: [
@@ -33,10 +33,10 @@ class ContactUsScreen extends StatelessWidget {
                         ),
                         padding: EdgeInsets.all(screen.width * 0.06),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryLight.withOpacity(0.2),
+                          color: AppTheme.primaryLight.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(25),
                           border: Border.all(
-                            color: AppTheme.cardSurface.withOpacity(0.3),
+                            color: AppTheme.cardSurface.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Column(
@@ -119,9 +119,11 @@ class ContactUsScreen extends StatelessWidget {
         ),
 
         decoration: BoxDecoration(
-          color: Colors.brown.withOpacity(0.08),
+          color: AppTheme.primary.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: Colors.brown.withOpacity(0.2)),
+          border: Border.all(
+            color: AppTheme.primary.withValues(alpha: 0.2),
+          ),
         ),
 
         child: Row(

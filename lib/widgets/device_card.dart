@@ -115,11 +115,12 @@ class DeviceSwitchCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Transform.scale(
-                scale: 0.85,
+                scale: 0.70,
                 child: Switch(
                   value: value,
                   onChanged: enabled ? onChanged : null,
                   activeTrackColor: AppTheme.success,
+                  thumbColor: WidgetStateProperty.all(const Color(0xFFFAF9F7)),
                 ),
               ),
               IconButton(
@@ -180,7 +181,7 @@ class _StatusDot extends StatelessWidget {
         color: color,
         shape: BoxShape.circle,
         boxShadow: isActive
-            ? [BoxShadow(color: color.withOpacity(0.5), blurRadius: 6)]
+            ? [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 6)]
             : null,
       ),
     );

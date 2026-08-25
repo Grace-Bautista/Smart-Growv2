@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:smart_grow_code/auth/auth_service.dart';
+import 'package:smart_grow_code/theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.initialMessage});
@@ -88,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message.replaceFirst('Exception: ', '')),
-        backgroundColor: isError ? Colors.redAccent : null,
+        backgroundColor: isError ? AppTheme.danger : null,
       ),
     );
   }
@@ -125,8 +126,8 @@ class _LoginScreenState extends State<LoginScreen> {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              const Color(0xFFB68C63).withOpacity(0.7),
-              const Color(0xFFF5EFE6),
+              AppTheme.primaryLight.withValues(alpha: 0.7),
+              AppTheme.primaryContainer,
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -154,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           .clamp(28.0, 38.0)
                           .toDouble(),
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF5D4037),
+                      color: AppTheme.primaryDark,
                     ),
                   ),
                   const SizedBox(height: 5),
@@ -165,7 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       fontSize: (screen.width * 0.035)
                           .clamp(14.0, 18.0)
                           .toDouble(),
-                      color: Colors.black54,
+                      color: AppTheme.textSecondary,
                     ),
                   ),
                   SizedBox(height: screen.height * 0.04),
@@ -190,14 +191,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: _isLoading ? null : _sendPasswordReset,
                       child: const Text(
                         'Forgot Password?',
-                        style: TextStyle(color: Color(0xFF5D4037)),
+                        style: TextStyle(color: AppTheme.primaryDark),
                       ),
                     ),
                   ),
                   SizedBox(height: screen.height * 0.02),
                   buildButton(
                     text: _isLoading ? 'LOGGING IN...' : 'LOGIN',
-                    color: const Color(0xFFB68C63),
+                    color: AppTheme.primary,
                     textColor: Colors.white,
                     onPressed: _isLoading ? null : login,
                   ),
@@ -220,11 +221,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
-        ],
+        color: AppTheme.cardSurface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+        boxShadow: AppTheme.softShadow(),
       ),
       child: TextField(
         controller: controller,
@@ -235,7 +234,7 @@ class _LoginScreenState extends State<LoginScreen> {
             : TextInputAction.next,
         onSubmitted: onSubmitted,
         decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: const Color(0xFFB68C63)),
+          prefixIcon: Icon(icon, color: AppTheme.primary),
           labelText: label,
           suffixIcon: isPassword
               ? IconButton(
@@ -243,7 +242,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     _isPasswordVisible
                         ? Icons.visibility
                         : Icons.visibility_off,
-                    color: Colors.grey,
+                    color: AppTheme.textSecondary,
                   ),
                   onPressed: () {
                     setState(() {
@@ -252,10 +251,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 )
               : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide.none,
-          ),
+          border: InputBorder.none,
         ),
       ),
     );
@@ -271,10 +267,10 @@ class _LoginScreenState extends State<LoginScreen> {
       width: double.infinity,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: AppTheme.space4),
           backgroundColor: color,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
           ),
         ),
         onPressed: onPressed,

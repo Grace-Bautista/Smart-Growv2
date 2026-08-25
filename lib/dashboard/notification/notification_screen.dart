@@ -62,9 +62,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     // Remove immediately from the visible list so Dismissible
     // does not remain in the widget tree.
     setState(() {
-      _items.removeWhere(
-        (alert) => alert['_key'] == key,
-      );
+      _items.removeWhere((alert) => alert['_key'] == key);
     });
 
     AlertStore.remove(key);
@@ -98,9 +96,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               },
               child: const Text(
                 'Clear All',
-                style: TextStyle(
-                  color: Colors.red,
-                ),
+                style: TextStyle(color: Colors.red),
               ),
             ),
           ],
@@ -126,38 +122,33 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     final today = grouped['Today'] ?? [];
     final yesterday = grouped['Yesterday'] ?? [];
-    final earlier = grouped['Earlier'] ?? [];
 
-    final hasUnread = _items.any(
-      (item) => item['read'] != true,
-    );
+    final otherDays =
+        grouped.entries
+            .where((entry) => entry.key != 'Today' && entry.key != 'Yesterday')
+            .toList()
+          ..sort((a, b) => b.key.compareTo(a.key));
+    final hasUnread = _items.any((item) => item['read'] != true);
 
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            const CustomHeaderButton(
-              title: 'Notifications',
-            ),
+            const CustomHeaderButton(title: 'Notifications'),
 
             Expanded(
               child: Container(
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      Color(0xFFF5F1E8),
-                      Color(0xFFEAE3D5),
-                    ],
+                    colors: [Color(0xFFF5F1E8), Color(0xFFEAE3D5)],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
                 ),
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxWidth: 850,
-                    ),
+                    constraints: const BoxConstraints(maxWidth: 850),
                     child: _items.isEmpty
                         ? const _EmptyNotificationView()
                         : ListView(
@@ -167,27 +158,21 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               // NOTIFICATION ACTIONS
                               // -----------------------------------------
                               Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.end,
+                                mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
                                   TextButton.icon(
-                                    onPressed: hasUnread
-                                        ? _markAllRead
-                                        : null,
+                                    onPressed: hasUnread ? _markAllRead : null,
                                     icon: const Icon(
                                       Icons.done_all_rounded,
                                       size: 18,
                                     ),
-                                    label: const Text(
-                                      'Mark all read',
-                                    ),
+                                    label: const Text('Mark all read'),
                                   ),
 
                                   const SizedBox(width: 8),
 
                                   IconButton(
-                                    tooltip:
-                                        'Clear all notifications',
+                                    tooltip: 'Clear all notifications',
                                     onPressed: _clearAll,
                                     icon: const Icon(
                                       Icons.delete_outline_rounded,
@@ -200,16 +185,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               // TODAY
                               // -----------------------------------------
                               if (today.isNotEmpty) ...[
-                                const SectionTitle(
-                                  title: 'Today',
-                                ),
+                                const SectionTitle(title: 'Today'),
 
                                 ...today.map(
-                                  (item) =>
-                                      AnimatedNotificationTile(
-                                    key: ValueKey(
-                                      'today-${item['_key']}',
-                                    ),
+                                  (item) => AnimatedNotificationTile(
+                                    key: ValueKey('today-${item['_key']}'),
                                     item: item,
                                     onDismiss: () {
                                       _removeItem(item);
@@ -225,20 +205,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               // YESTERDAY
                               // -----------------------------------------
                               if (yesterday.isNotEmpty) ...[
-                                SizedBox(
-                                  height: padding * 0.5,
-                                ),
+                                SizedBox(height: padding * 0.5),
 
-                                const SectionTitle(
-                                  title: 'Yesterday',
-                                ),
+                                const SectionTitle(title: 'Yesterday'),
 
                                 ...yesterday.map(
-                                  (item) =>
-                                      AnimatedNotificationTile(
-                                    key: ValueKey(
-                                      'yesterday-${item['_key']}',
-                                    ),
+                                  (item) => AnimatedNotificationTile(
+                                    key: ValueKey('yesterday-${item['_key']}'),
                                     item: item,
                                     onDismiss: () {
                                       _removeItem(item);
@@ -251,33 +224,35 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               ],
 
                               // -----------------------------------------
-                              // EARLIER
+                              // OTHER DATES
                               // -----------------------------------------
-                              if (earlier.isNotEmpty) ...[
-                                SizedBox(
-                                  height: padding * 0.5,
-                                ),
+                              ...otherDays.map(
+                                (entry) => Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    SizedBox(height: padding * 0.5),
 
-                                const SectionTitle(
-                                  title: 'Earlier',
-                                ),
-
-                                ...earlier.map(
-                                  (item) =>
-                                      AnimatedNotificationTile(
-                                    key: ValueKey(
-                                      'earlier-${item['_key']}',
+                                    SectionTitle(
+                                      title: _formatDateGroupTitle(entry.key),
                                     ),
-                                    item: item,
-                                    onDismiss: () {
-                                      _removeItem(item);
-                                    },
-                                    onTap: () {
-                                      _markRead(item);
-                                    },
-                                  ),
+
+                                    ...entry.value.map(
+                                      (item) => AnimatedNotificationTile(
+                                        key: ValueKey(
+                                          '${entry.key}-${item['_key']}',
+                                        ),
+                                        item: item,
+                                        onDismiss: () {
+                                          _removeItem(item);
+                                        },
+                                        onTap: () {
+                                          _markRead(item);
+                                        },
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
 
                               SizedBox(height: padding),
                             ],
@@ -291,13 +266,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
       ),
     );
   }
+
+  String _formatDateGroupTitle(String key) {
+    final date = DateTime.tryParse(key);
+
+    if (date == null) {
+      return key;
+    }
+
+    return MaterialLocalizations.of(context).formatMediumDate(date);
+  }
 }
 
 class SectionTitle extends StatelessWidget {
-  const SectionTitle({
-    super.key,
-    required this.title,
-  });
+  const SectionTitle({super.key, required this.title});
 
   final String title;
 
@@ -306,9 +288,7 @@ class SectionTitle extends StatelessWidget {
     final width = MediaQuery.of(context).size.width;
 
     return Padding(
-      padding: EdgeInsets.symmetric(
-        vertical: width * 0.03,
-      ),
+      padding: EdgeInsets.symmetric(vertical: width * 0.03),
       child: Text(
         title,
         style: TextStyle(
@@ -338,8 +318,7 @@ class AnimatedNotificationTile extends StatefulWidget {
       _AnimatedNotificationTileState();
 }
 
-class _AnimatedNotificationTileState
-    extends State<AnimatedNotificationTile>
+class _AnimatedNotificationTileState extends State<AnimatedNotificationTile>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<Offset> _slideAnimation;
@@ -351,30 +330,18 @@ class _AnimatedNotificationTileState
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(
-        milliseconds: 400,
-      ),
+      duration: const Duration(milliseconds: 400),
     );
 
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.1),
       end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeOut,
-      ),
-    );
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     _fadeAnimation = Tween<double>(
       begin: 0,
       end: 1,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeOut,
-      ),
-    );
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     _controller.forward();
   }
@@ -389,24 +356,16 @@ class _AnimatedNotificationTileState
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
 
-    final title =
-        widget.item['title']?.toString() ??
-        'Smart-Grow Alert';
+    final title = widget.item['title']?.toString() ?? 'Smart-Grow Alert';
 
-    final subtitle =
-        widget.item['subtitle']?.toString() ?? '';
+    final subtitle = widget.item['subtitle']?.toString() ?? '';
 
-    final iconKey =
-        widget.item['iconKey']?.toString() ??
-        'notification';
+    final iconKey = widget.item['iconKey']?.toString() ?? 'notification';
 
     final colorValue =
-        (widget.item['colorValue'] as num?)
-            ?.toInt() ??
-        0xFF8B6F47;
+        (widget.item['colorValue'] as num?)?.toInt() ?? 0xFF8B6F47;
 
-    final isRead =
-        widget.item['read'] == true;
+    final isRead = widget.item['read'] == true;
 
     final timestamp = DateTime.tryParse(
       widget.item['timestamp']?.toString() ?? '',
@@ -420,173 +379,107 @@ class _AnimatedNotificationTileState
       child: SlideTransition(
         position: _slideAnimation,
         child: Dismissible(
-          key: ValueKey(
-            'dismiss-${widget.item['_key']}',
-          ),
+          key: ValueKey('dismiss-${widget.item['_key']}'),
           direction: DismissDirection.endToStart,
           onDismissed: (_) {
             widget.onDismiss();
           },
           background: Container(
             alignment: Alignment.centerRight,
-            margin: EdgeInsets.symmetric(
-              vertical: width * 0.02,
-            ),
-            padding: EdgeInsets.only(
-              right: width * 0.05,
-            ),
+            margin: EdgeInsets.symmetric(vertical: width * 0.02),
+            padding: EdgeInsets.only(right: width * 0.05),
             decoration: BoxDecoration(
               color: const Color(0xFFB56576),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Icon(
-              Icons.delete_rounded,
-              color: Colors.white,
-            ),
+            child: const Icon(Icons.delete_rounded, color: Colors.white),
           ),
           child: GestureDetector(
             onTap: widget.onTap,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: 12,
-                  sigmaY: 12,
-                ),
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                 child: Container(
                   width: double.infinity,
-                  margin: EdgeInsets.symmetric(
-                    vertical: width * 0.02,
-                  ),
-                  padding: EdgeInsets.all(
-                    width * 0.045,
-                  ),
+                  margin: EdgeInsets.symmetric(vertical: width * 0.02),
+                  padding: EdgeInsets.all(width * 0.045),
                   decoration: BoxDecoration(
                     color: isRead
-                        ? Colors.white.withValues(
-                            alpha: 0.55,
-                          )
-                        : const Color(
-                            0xFFEDE6DA,
-                          ).withValues(
-                            alpha: 0.75,
-                          ),
-                    borderRadius:
-                        BorderRadius.circular(20),
+                        ? Colors.white.withValues(alpha: 0.55)
+                        : const Color(0xFFEDE6DA).withValues(alpha: 0.75),
+                    borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: isRead
-                          ? Colors.white.withValues(
-                              alpha: 0.35,
-                            )
-                          : const Color(
-                              0xFF8B6F47,
-                            ).withValues(
-                              alpha: 0.18,
-                            ),
+                          ? Colors.white.withValues(alpha: 0.35)
+                          : const Color(0xFF8B6F47).withValues(alpha: 0.18),
                     ),
                   ),
                   child: Row(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       CircleAvatar(
-                        backgroundColor:
-                            color.withValues(
-                          alpha: 0.16,
-                        ),
-                        child: Icon(
-                          icon,
-                          color: color,
-                        ),
+                        backgroundColor: color.withValues(alpha: 0.16),
+                        child: Icon(icon, color: color),
                       ),
 
-                      SizedBox(
-                        width: width * 0.04,
-                      ),
+                      SizedBox(width: width * 0.04),
 
                       Expanded(
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Expanded(
                                   child: Text(
                                     title,
                                     style: TextStyle(
-                                      fontSize:
-                                          width * 0.045,
+                                      fontSize: width * 0.045,
                                       fontWeight: isRead
                                           ? FontWeight.w500
                                           : FontWeight.w700,
-                                      color: const Color(
-                                        0xFF263A2A,
-                                      ),
+                                      color: const Color(0xFF263A2A),
                                     ),
                                   ),
                                 ),
 
                                 if (!isRead) ...[
-                                  const SizedBox(
-                                    width: 8,
-                                  ),
+                                  const SizedBox(width: 8),
                                   Container(
                                     width: 8,
                                     height: 8,
-                                    margin:
-                                        const EdgeInsets.only(
-                                      top: 5,
-                                    ),
-                                    decoration:
-                                        const BoxDecoration(
-                                      color: Color(
-                                        0xFF8B6F47,
-                                      ),
-                                      shape:
-                                          BoxShape.circle,
+                                    margin: const EdgeInsets.only(top: 5),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF8B6F47),
+                                      shape: BoxShape.circle,
                                     ),
                                   ),
                                 ],
                               ],
                             ),
 
-                            SizedBox(
-                              height: width * 0.012,
-                            ),
+                            SizedBox(height: width * 0.012),
 
                             Text(
                               subtitle,
                               style: TextStyle(
-                                fontSize:
-                                    width * 0.038,
+                                fontSize: width * 0.038,
                                 height: 1.35,
-                                color: const Color(
-                                  0xFF5A534A,
-                                ),
+                                color: const Color(0xFF5A534A),
                               ),
                             ),
 
                             if (timestamp != null) ...[
-                              SizedBox(
-                                height:
-                                    width * 0.018,
-                              ),
+                              SizedBox(height: width * 0.018),
 
                               Text(
-                                _formatNotificationTime(
-                                  context,
-                                  timestamp,
-                                ),
+                                _formatNotificationTime(context, timestamp),
                                 style: TextStyle(
-                                  fontSize:
-                                      width * 0.032,
-                                  fontWeight:
-                                      FontWeight.w500,
-                                  color:
-                                      Colors.grey.shade600,
+                                  fontSize: width * 0.032,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey.shade600,
                                 ),
                               ),
                             ],
@@ -620,11 +513,7 @@ class _EmptyNotificationView extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: const Color(
-                  0xFF537D42,
-                ).withValues(
-                  alpha: 0.12,
-                ),
+                color: const Color(0xFF537D42).withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -730,6 +619,7 @@ IconData _iconFromKey(String key) {
       return Icons.notifications_rounded;
   }
 }
+
 /// Creates user-friendly time labels without needing the intl package.
 ///
 /// Examples:
@@ -738,29 +628,16 @@ IconData _iconFromKey(String key) {
 /// 2 hrs ago
 /// Yesterday • 6:30 PM
 /// 8/8/2026 • 4:15 PM
-String _formatNotificationTime(
-  BuildContext context,
-  DateTime timestamp,
-) {
+String _formatNotificationTime(BuildContext context, DateTime timestamp) {
   final now = DateTime.now();
 
   final difference = now.difference(timestamp);
 
-  final timestampDay = DateTime(
-    timestamp.year,
-    timestamp.month,
-    timestamp.day,
-  );
+  final timestampDay = DateTime(timestamp.year, timestamp.month, timestamp.day);
 
-  final today = DateTime(
-    now.year,
-    now.month,
-    now.day,
-  );
+  final today = DateTime(now.year, now.month, now.day);
 
-  final yesterday = today.subtract(
-    const Duration(days: 1),
-  );
+  final yesterday = today.subtract(const Duration(days: 1));
 
   if (timestampDay == today) {
     if (difference.inSeconds < 60) {
@@ -778,17 +655,13 @@ String _formatNotificationTime(
     return '$hours hr${hours == 1 ? '' : 's'} ago';
   }
 
-  final time = TimeOfDay.fromDateTime(
-    timestamp,
-  ).format(context);
+  final time = TimeOfDay.fromDateTime(timestamp).format(context);
 
   if (timestampDay == yesterday) {
     return 'Yesterday • $time';
   }
 
-  final date = MaterialLocalizations.of(
-    context,
-  ).formatShortDate(timestamp);
+  final date = MaterialLocalizations.of(context).formatShortDate(timestamp);
 
   return '$date • $time';
 }

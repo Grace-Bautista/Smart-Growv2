@@ -45,12 +45,12 @@ class SensorData {
     this.humidity,
     this.co2,
     this.waterLevel,
-    this.humidifierTemperature,
+    //this.humidifierTemperature,
     this.environmentTempStatus = const SensorReadingStatus(),
     this.humidityStatus = const SensorReadingStatus(),
     this.co2Status = const SensorReadingStatus(),
     this.waterLevelStatus = const SensorReadingStatus(),
-    this.humidifierTempStatus = const SensorReadingStatus(),
+   // this.humidifierTempStatus = const SensorReadingStatus(),
     this.humidifierOn,
     this.ventFanOn,
     this.baseFanOn,
@@ -65,9 +65,9 @@ class SensorData {
   });
 
   final double? environmentTemperature, humidity, co2, waterLevel;
-  final double? humidifierTemperature;
+  // final double? humidifierTemperature;
   final SensorReadingStatus environmentTempStatus, humidityStatus, co2Status;
-  final SensorReadingStatus waterLevelStatus, humidifierTempStatus;
+  final SensorReadingStatus waterLevelStatus; // humidifierTempStatus;
   final bool? humidifierOn, ventFanOn, baseFanOn, loopPumpOn, uvLightOn;
   final RefillPumpState refillPump;
   final Map<String, ComponentStatus> componentStatuses;
@@ -98,7 +98,13 @@ class SensorData {
     final device = _asMap(root['device']);
     final refill = _asMap(components['refillPump']);
     final parsedStatuses = <String, ComponentStatus>{};
-    for (final name in ['humidifier', 'uvLight', 'ventFan', 'baseFan', 'loopPump']) {
+    for (final name in [
+      'humidifier',
+      'uvLight',
+      'ventFan',
+      'baseFan',
+      'loopPump',
+    ]) {
       final status = _asMap(componentStatus[name]);
       parsedStatuses[name] = ComponentStatus(
         updatedAt: _asDateTime(status['updatedAt']),
@@ -110,12 +116,12 @@ class SensorData {
       humidity: _asDouble(sensors['humidity']),
       co2: _asDouble(sensors['co2']),
       waterLevel: _asDouble(sensors['waterLevel']),
-      humidifierTemperature: _asDouble(sensors['humidifierTemp']),
+      //humidifierTemperature: _asDouble(sensors['humidifierTemp']),
       environmentTempStatus: _status(statuses['environmentTemp']),
       humidityStatus: _status(statuses['humidity']),
       co2Status: _status(statuses['co2']),
       waterLevelStatus: _status(statuses['waterLevel']),
-      humidifierTempStatus: _status(statuses['humidifierTemp']),
+      //humidifierTempStatus: _status(statuses['humidifierTemp']),
       humidifierOn: _asBool(components['humidifier']),
       ventFanOn: _asBool(components['ventFan']),
       baseFanOn: _asBool(components['baseFan']),
@@ -144,14 +150,15 @@ class SensorData {
       updatedAt: _asDateTime(status['updatedAt']),
     );
   }
+
   static Map<Object?, Object?> _asMap(Object? value) =>
       value is Map ? Map<Object?, Object?>.from(value) : const {};
-  static double? _asDouble(Object? value) =>
-      value is num ? value.toDouble() : double.tryParse(value?.toString() ?? '');
+  static double? _asDouble(Object? value) => value is num
+      ? value.toDouble()
+      : double.tryParse(value?.toString() ?? '');
   static bool? _asBool(Object? value) => value is bool ? value : null;
-  static DateTime? _asDateTime(Object? value) => value is num
-      ? DateTime.fromMillisecondsSinceEpoch(value.toInt())
-      : null;
+  static DateTime? _asDateTime(Object? value) =>
+      value is num ? DateTime.fromMillisecondsSinceEpoch(value.toInt()) : null;
   static String? _nullableString(Object? value) {
     final text = value?.toString().trim();
     return text == null || text.isEmpty ? null : text;

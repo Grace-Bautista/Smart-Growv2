@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/sensor_history_record.dart';
+import '../models/system_event_log.dart';
 import '../repositories/logbook_repository.dart';
 import 'environmental_chart.dart';
 
@@ -88,30 +89,52 @@ class _OverviewSectionState extends State<OverviewSection> {
                     ),
             ),
             const SizedBox(height: 14),
-            LayoutBuilder(
-              builder: (context, box) {
-                final width = box.maxWidth > 700
-                    ? (box.maxWidth - 36) / 4
-                    : box.maxWidth > 400
-                    ? (box.maxWidth - 12) / 2
-                    : box.maxWidth;
-                return Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    _Stat(
-                      'Sensor Readings',
-                      '${records.length}',
-                      Icons.sensors,
-                    ),
-                    const _Stat(
-                      'Humidifier Runtime',
-                      '4h 20m',
-                      Icons.water_drop_outlined,
-                    ),
-                    const _Stat('Water Used', '12.4 L', Icons.opacity),
-                    const _Stat('System Events', '7', Icons.bolt_outlined),
-                  ].map((item) => SizedBox(width: width, child: item)).toList(),
+            FutureBuilder<List<SystemEventLog>>(
+              future: widget.repository.getSystemEvents(
+                start: widget.startDate,
+                end: widget.endDate,
+              ),
+              builder: (context, eventSnapshot) {
+                final events = eventSnapshot.data ?? const <SystemEventLog>[];
+
+                return LayoutBuilder(
+                  builder: (context, box) {
+                    final width = box.maxWidth > 700
+                        ? (box.maxWidth - 36) / 4
+                        : box.maxWidth > 400
+                        ? (box.maxWidth - 12) / 2
+                        : box.maxWidth;
+
+                    final items = [
+                      _Stat(
+                        'Sensor Samples',
+                        '${records.length}',
+                        Icons.sensors,
+                      ),
+
+                      const _Stat(
+                        'Humidifier Runtime',
+                        '--',
+                        Icons.water_drop_outlined,
+                      ),
+
+                      const _Stat('Water Used', '--', Icons.opacity),
+
+                      _Stat(
+                        'System Events',
+                        '${events.length}',
+                        Icons.bolt_outlined,
+                      ),
+                    ];
+
+                    return Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: items
+                          .map((item) => SizedBox(width: width, child: item))
+                          .toList(),
+                    );
+                  },
                 );
               },
             ),

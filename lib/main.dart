@@ -13,9 +13,10 @@ import 'package:smart_grow_code/screens/sensor_test_screen.dart';
 
 import 'package:smart_grow_code/services/alert_store.dart';
 import 'package:smart_grow_code/services/app_settings_service.dart';
-import 'package:smart_grow_code/services/grow_log_store.dart';
+import 'package:smart_grow_code/services/esp32_service.dart';
 import 'package:smart_grow_code/services/push_notification_service.dart';
 import 'package:smart_grow_code/services/sensor_monitor_service.dart';
+import 'package:smart_grow_code/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,8 +32,6 @@ void main() async {
   await Hive.initFlutter();
 
   await Hive.openBox('harvestBox');
-
-  await GrowLogStore.init();
 
   await AlertStore.init();
 
@@ -56,9 +55,11 @@ void main() async {
   //
   FirebaseAuth.instance.authStateChanges().listen((user) async {
     if (user != null) {
+      Esp32Service.instance.start();
       await SensorMonitorService.start();
     } else {
       await SensorMonitorService.stop();
+      await Esp32Service.instance.stop();
     }
   });
 
@@ -80,14 +81,10 @@ class SmartGrowApp extends StatelessWidget {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Smart Grow App',
-          theme: ThemeData(
-            primarySwatch: Colors.brown,
-            appBarTheme: AppBarTheme(
-              titleTextStyle: TextStyle(
-                fontSize: fontSettings.headerFontSize,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+          theme: AppTheme.light.copyWith(
+            appBarTheme: AppTheme.light.appBarTheme.copyWith(
+              titleTextStyle: AppTheme.light.appBarTheme.titleTextStyle
+                  ?.copyWith(fontSize: fontSettings.headerFontSize),
             ),
           ),
           builder: (context, child) {

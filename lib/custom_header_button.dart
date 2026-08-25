@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_grow_code/theme/app_theme.dart';
 
 class CustomHeaderButton extends StatelessWidget {
   final String title;
@@ -9,19 +10,13 @@ class CustomHeaderButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppTheme.space3),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: AppTheme.space3),
         decoration: BoxDecoration(
-          color: const Color(0xFFB68C63),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 6,
-              offset: Offset(0, 3),
-            ),
-          ],
+          color: AppTheme.primary,
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+          boxShadow: AppTheme.softShadow(),
         ),
         child: Row(
           children: [
@@ -32,8 +27,9 @@ class CustomHeaderButton extends StatelessWidget {
             Expanded(
               child: Center(
                 child: Text(
-                  title, //  dynamic title here
+                  title,
                   style: const TextStyle(
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
                     letterSpacing: 1.2,

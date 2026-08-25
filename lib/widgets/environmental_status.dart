@@ -116,7 +116,7 @@ class _StatusBadge extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.35),
+              color: color.withValues(alpha: 0.35),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),

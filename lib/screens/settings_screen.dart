@@ -4,12 +4,14 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:smart_grow_code/custom_header_button.dart';
 import 'package:smart_grow_code/services/app_settings_service.dart';
+import 'package:smart_grow_code/services/esp32_service.dart';
 import 'package:smart_grow_code/services/sensor_service.dart';
 import 'package:smart_grow_code/models/sensor_data.dart';
 import 'package:smart_grow_code/services/user_management_service.dart';
 import 'package:smart_grow_code/screens/sensor_test_screen.dart';
 import 'package:smart_grow_code/auth/auth_service.dart';
 import 'package:smart_grow_code/screens/contact_us_screen.dart';
+import 'package:smart_grow_code/theme/app_theme.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -19,7 +21,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  double intervalHours = 6;
   bool deviceOn = false;
   bool deviceConnected = false;
   late double headerFontSize;
@@ -28,7 +29,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _resettingPassword = false;
   StreamSubscription<SensorData>? _deviceSubscription;
 
-  static const _brown = Colors.brown;
+  static const _brown = AppTheme.primary;
 
   @override
   void initState() {
@@ -36,27 +37,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final current = AppSettingsService.current;
     headerFontSize = current.headerFontSize;
     bodyFontSize = current.bodyFontSize;
+    deviceConnected = Esp32Service.instance.isOnline.value;
+    Esp32Service.instance.isOnline.addListener(_applyConnectionStatus);
     _deviceSubscription = SensorService.instance.watchLiveData().listen(
-      _applyDeviceStatus,
+      _applyControllerStatus,
     );
   }
 
-  void _applyDeviceStatus(SensorData data) {
+  void _applyConnectionStatus() {
     if (!mounted) return;
-    setState(() {
-      deviceConnected = data.isDeviceAvailable(DateTime.now());
-      deviceOn =
-          (data.humidifierOn ?? false) ||
-          (data.ventFanOn ?? false) ||
-          (data.baseFanOn ?? false) ||
-          (data.refillPumpOn ?? false) ||
-          (data.loopPumpOn ?? false) ||
-          (data.uvLightOn ?? false);
-    });
+    final online = Esp32Service.instance.isOnline.value;
+    if (deviceConnected != online) {
+      setState(() => deviceConnected = online);
+    }
+  }
+
+  void _applyControllerStatus(SensorData data) {
+    if (!mounted) return;
+
+    final anyControllerOutputOn =
+        (data.humidifierOn ?? false) ||
+        (data.ventFanOn ?? false) ||
+        (data.baseFanOn ?? false) ||
+        (data.refillPumpOn ?? false) ||
+        (data.loopPumpOn ?? false) ||
+        (data.uvLightOn ?? false);
+
+    if (deviceOn != anyControllerOutputOn) {
+      setState(() => deviceOn = anyControllerOutputOn);
+    }
   }
 
   @override
   void dispose() {
+    Esp32Service.instance.isOnline.removeListener(_applyConnectionStatus);
     _deviceSubscription?.cancel();
     super.dispose();
   }
@@ -149,25 +163,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
         data: Theme.of(context).copyWith(
           colorScheme: ColorScheme.fromSeed(seedColor: _brown),
           switchTheme: SwitchThemeData(
-            thumbColor: WidgetStateProperty.all(_brown.shade400),
-            trackColor: WidgetStateProperty.all(_brown.withOpacity(0.4)),
+            thumbColor: WidgetStateProperty.all(AppTheme.primaryLight),
+            trackColor: WidgetStateProperty.all(_brown.withValues(alpha: 0.4)),
           ),
           sliderTheme: SliderThemeData(
             activeTrackColor: Colors.green.shade500,
             inactiveTrackColor: Colors.white,
-            thumbColor: _brown.shade400,
-            overlayColor: _brown.withOpacity(0.2),
+            thumbColor: AppTheme.primaryLight,
+            overlayColor: _brown.withValues(alpha: 0.2),
           ),
         ),
         child: Scaffold(
-          backgroundColor: const Color(0xFFF6F1EC),
           body: SafeArea(
             child: Column(
               children: [
-                CustomHeaderButton(
-                  title: 'Settings',
-                  onBack: _saveAndClose,
-                ),
+                CustomHeaderButton(title: 'Settings', onBack: _saveAndClose),
                 // Everything below lives in ONE scroll view now — previously
                 // only the first card scrolled and the rest (Appearance,
                 // Account, Tools, Logout) sat outside it in a fixed-height
@@ -206,35 +216,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                 ),
                               ],
-                            ),
-                            const SizedBox(height: 16),
-                            const Divider(height: 1),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Refill Interval',
-                              style: TextStyle(
-                                fontSize: bodyFontSize,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Every ${intervalHours.toInt()} hours',
-                              style: TextStyle(
-                                fontSize: bodyFontSize * 0.9,
-                                color: Colors.black,
-                              ),
-                            ),
-                            Slider(
-                              value: intervalHours,
-                              min: 1,
-                              max: 24,
-                              divisions: 23,
-                              label: '${intervalHours.toInt()}h',
-                              onChanged: (value) {
-                                setState(() => intervalHours = value);
-                              },
                             ),
                           ],
                         ),
@@ -280,7 +261,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               'These changes apply when you go back from Settings.',
                               style: TextStyle(
                                 fontSize: (bodyFontSize * 0.85).clamp(10, 20),
-                                color: _brown.shade700,
+                                color: AppTheme.primaryDark,
                                 fontStyle: FontStyle.italic,
                               ),
                             ),
@@ -295,7 +276,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           width: double.infinity,
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFF8B5E3C),
+                              backgroundColor: AppTheme.primary,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
@@ -403,32 +384,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   String _getStatusText() {
-    if (!deviceConnected) return 'ESP32 not connected';
+    if (!deviceConnected) {
+      return 'ESP32 is offline';
+    }
+
     return deviceOn
-        ? 'One or more controller outputs are ON'
-        : 'Controller outputs are OFF';
+        ? 'ESP32 is online • One or more controller outputs are ON'
+        : 'ESP32 is online • Controller outputs are OFF';
   }
 
   Widget _statusIndicator() {
-    Color color;
-    IconData icon;
-
-    if (!deviceConnected) {
-      color = Colors.grey;
-      icon = Icons.wifi_off;
-    } else if (deviceOn) {
-      color = Colors.green;
-      icon = Icons.power;
-    } else {
-      color = Colors.red;
-      icon = Icons.power_off;
-    }
+    final Color color = deviceConnected ? Colors.green : Colors.grey;
+    final IconData icon = deviceConnected
+        ? Icons.wifi_rounded
+        : Icons.wifi_off_rounded;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         shape: BoxShape.circle,
       ),
       child: Icon(icon, size: 18, color: color),
@@ -447,14 +422,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           fontSize: (bodyFontSize * 0.72).clamp(11, 14),
           fontWeight: FontWeight.w700,
           letterSpacing: 0.9,
-          color: _brown.shade400,
+          color: AppTheme.primaryLight,
         ),
       ),
     );
   }
 
   Widget _divider() =>
-      Divider(height: 1, indent: 4, color: _brown.withOpacity(0.12));
+      Divider(height: 1, indent: 4, color: _brown.withValues(alpha: 0.12));
 
   /// A single tappable settings row (icon + title + optional chevron).
   ///
@@ -481,7 +456,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
           child: Row(
             children: [
-              Icon(icon, size: 22, color: iconColor ?? _brown.shade700),
+              Icon(icon, size: 22, color: iconColor ?? AppTheme.primaryDark),
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
@@ -489,14 +464,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(
                     fontSize: bodyFontSize,
                     fontWeight: bold ? FontWeight.bold : FontWeight.w500,
-                    color:  Colors.black,
+                    color:
+                        titleColor ?? Theme.of(context).colorScheme.onSurface,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (showChevron)
-                Icon(Icons.chevron_right, size: 20, color: _brown.shade300),
+                Icon(
+                  Icons.chevron_right,
+                  size: 20,
+                  color: AppTheme.primaryLight,
+                ),
             ],
           ),
         ),
@@ -513,9 +493,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.35),
+            color: Colors.white.withValues(alpha: 0.35),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: _brown.withOpacity(0.2)),
+            border: Border.all(color: _brown.withValues(alpha: 0.2)),
           ),
           child: child,
         ),

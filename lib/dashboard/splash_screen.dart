@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_grow_code/theme/app_theme.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
@@ -11,7 +12,7 @@ class SplashScreen extends StatelessWidget {
         height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFB68C63), Color(0xFFF5EFE6)],
+            colors: [AppTheme.primaryLight, AppTheme.primaryContainer],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -24,17 +25,17 @@ class SplashScreen extends StatelessWidget {
                 radius: 42,
                 backgroundImage: AssetImage('assets/images/adhika_logo.jpg'),
               ),
-              SizedBox(height: 18),
+              SizedBox(height: AppTheme.space5),
               Text(
                 'Smart Grow',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF5D4037),
+                  color: AppTheme.primaryDark,
                 ),
               ),
-              SizedBox(height: 18),
-              CircularProgressIndicator(color: Color(0xFF5D4037)),
+              SizedBox(height: AppTheme.space5),
+              CircularProgressIndicator(),
             ],
           ),
         ),
