@@ -352,7 +352,6 @@ class GuidesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade300,
       body: SafeArea(
         child: Column(
           children: [
@@ -477,7 +476,6 @@ class GuideArticlePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(article.title),
-        backgroundColor: const Color(0xFFB68C63),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),

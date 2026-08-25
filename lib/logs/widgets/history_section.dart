@@ -60,39 +60,46 @@ class _HistorySectionState extends State<HistorySection> {
       );
       groups.putIfAbsent(d, () => []).add(row);
     }
-    return SingleChildScrollView(
-      key: const ValueKey('history'),
-      child: Column(
-        children: [
-          Text(
-            'History Logs',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 4),
+    return Align(
+      alignment: Alignment.topCenter,
+      child: SingleChildScrollView(
+        key: const ValueKey('history'),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            Text(
+              'History Logs',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
 
-          const SizedBox(height: 10),
-          _HistoryCategorySelector(
-            selected: category,
-            onChanged: (value) {
-              setState(() => category = value);
-            },
-          ),
-          const SizedBox(height: 20),
-          if (rows.isEmpty)
-            const Center(
-              child: Padding(
+            const SizedBox(height: 10),
+
+            _HistoryCategorySelector(
+              selected: category,
+              onChanged: (value) {
+                setState(() => category = value);
+              },
+            ),
+
+            const SizedBox(height: 20),
+
+            if (rows.isEmpty)
+              const Padding(
                 padding: EdgeInsets.all(32),
                 child: Text('No logs in this date range.'),
+              )
+            else
+              ...groups.entries.map(
+                (group) => _DateGroup(date: group.key, rows: group.value),
               ),
-            )
-          else
-            ...groups.entries.map(
-              (group) => _DateGroup(date: group.key, rows: group.value),
-            ),
-          const SizedBox(height: 20),
-        ],
+
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }

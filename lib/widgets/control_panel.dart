@@ -97,36 +97,35 @@ class ControlPanel extends StatelessWidget {
           const SizedBox(height: AppTheme.space5),
 
           // ---- Pump / Fan tiles -------------------------------------------
-          LayoutBuilder(
-            builder: (context, constraints) {
-              return Row(
-                children: [
-                  Expanded(
-                    child: DeviceIconTile(
-                      title: 'Loop Pump',
-                      description: pumpFault ??
-                          'ESP32-controlled status only. It follows the humidifier hardware logic.',
-                      icon: Icons.compare_arrows,
-                      isActive: pumpActive,
-                      onTap: null,
-                      enabled: false,
-                    ),
-                  ),
-                  const SizedBox(width: AppTheme.space3),
-                  Expanded(
-                    child: DeviceIconTile(
-                      title: 'Base Fan',
-                      description: fanFault ??
-                          'ESP32-controlled status only. It follows the humidifier hardware logic.',
-                      icon: Icons.cyclone,
-                      isActive: fanActive,
-                      onTap: null,
-                      enabled: false,
-                    ),
-                  ),
-                ],
-              );
-            },
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: DeviceIconTile(
+                  title: 'Loop Pump',
+                  description:
+                      pumpFault ??
+                      'ESP32-controlled status only. It follows the humidifier hardware logic.',
+                  icon: Icons.compare_arrows,
+                  isActive: pumpActive,
+                  onTap: null,
+                  enabled: false,
+                ),
+              ),
+              const SizedBox(width: AppTheme.space3),
+              Expanded(
+                child: DeviceIconTile(
+                  title: 'Base Fan',
+                  description:
+                      fanFault ??
+                      'ESP32-controlled status only. It follows the humidifier hardware logic.',
+                  icon: Icons.cyclone,
+                  isActive: fanActive,
+                  onTap: null,
+                  enabled: false,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AppTheme.space5),
 

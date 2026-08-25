@@ -30,46 +30,72 @@ class DeviceIconTile extends StatelessWidget {
       onTap: enabled ? onTap : null,
       radius: AppTheme.radiusSm,
       border: Border.all(color: AppTheme.divider),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppTheme.space4,
-        vertical: AppTheme.space3,
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space4,
+        AppTheme.space3,
+        AppTheme.space2,
+        AppTheme.space3,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Status + help
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               _StatusDot(isActive: isActive),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.help_outline, size: 18),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: Text(title),
-                      content: Text(description),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text("Close"),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+              const Spacer(),
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  splashRadius: 16,
+                  icon: const Icon(
+                    Icons.help_outline_rounded,
+                    size: 17,
+                    color: AppTheme.textSecondary,
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: Text(title),
+                        content: Text(description),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Close'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
           ),
+
           const SizedBox(height: AppTheme.space2),
-          Icon(icon, size: 30, color: iconColor),
+
+          Transform.translate(
+            offset: const Offset(-4, 0),
+            child: Icon(icon, size: 30, color: iconColor),
+          ),
+
           const SizedBox(height: AppTheme.space2),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.textPrimary,
-              fontWeight: FontWeight.w500,
+
+          Transform.translate(
+            offset: const Offset(-4, 0),
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -106,58 +132,90 @@ class DeviceSwitchCard extends StatelessWidget {
     return AnimatedHoverCard(
       onTap: enabled ? () => onChanged(!value) : null,
       color: AppTheme.cardSurface,
-      padding: const EdgeInsets.all(AppTheme.space4),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.space4,
+        AppTheme.space3,
+        AppTheme.space2,
+        AppTheme.space3,
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Switch + help
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Transform.scale(
-                scale: 0.70,
-                child: Switch(
-                  value: value,
-                  onChanged: enabled ? onChanged : null,
-                  activeTrackColor: AppTheme.success,
-                  thumbColor: WidgetStateProperty.all(const Color(0xFFFAF9F7)),
+              SizedBox(
+                width: 42,
+                height: 26,
+                child: Transform.scale(
+                  scale: 0.60,
+                  alignment: Alignment.centerLeft,
+                  child: Switch(
+                    value: value,
+                    onChanged: enabled ? onChanged : null,
+                    activeTrackColor: AppTheme.success,
+                    thumbColor: WidgetStateProperty.all(
+                      const Color(0xFFFAF9F7),
+                    ),
+                  ),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.help_outline),
-                iconSize: 18,
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: Text(title),
-                      content: Text(description),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text("Close"),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+
+              const Spacer(),
+
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  splashRadius: 14,
+                  icon: const Icon(
+                    Icons.help_outline_rounded,
+                    size: 17,
+                    color: AppTheme.textSecondary,
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: Text(title),
+                        content: Text(description),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Close'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
           ),
 
-          const SizedBox(height: AppTheme.space2),
+          const SizedBox(height: AppTheme.space3),
 
-          Row(
-            children: [
-              Icon(icon, color: accent, size: 22),
-              const SizedBox(width: AppTheme.space2),
-              Expanded(
-                child: Text(
+          // Device icon + label
+          Transform.translate(
+            offset: const Offset(-4, 0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: accent, size: 22),
+                const SizedBox(width: AppTheme.space2),
+                Text(
                   title,
-                  style: Theme.of(context).textTheme.titleSmall,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

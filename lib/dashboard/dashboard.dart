@@ -153,15 +153,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         builder: (context, snapshot) {
           final data = snapshot.data ?? const SensorData();
 
-        // --------------------------------------------------------
-        // REAL DEVICE AVAILABILITY
-        // --------------------------------------------------------
-        //
-        // Keep this unchanged.
-        //
-        // This continues to control actual application behaviour
-        // such as enabling/disabling commands.
-        //
+          // --------------------------------------------------------
+          // REAL DEVICE AVAILABILITY
+          // --------------------------------------------------------
+          //
+          // Keep this unchanged.
+          //
+          // This continues to control actual application behaviour
+          // such as enabling/disabling commands.
+          //
           final available = data.isDeviceAvailable(DateTime.now());
 
           return Scaffold(
@@ -213,7 +213,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return SliverAppBar(
       pinned: true,
       floating: true,
-      backgroundColor: AppTheme.primary,
       title: const Text('SmartGrow'),
 
       actions: [
@@ -325,11 +324,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
           ),
 
-          const SizedBox(height: AppTheme.space3),
+          const SizedBox(height: AppTheme.space5),
 
-          const SectionTitle(title: 'Control Panel'),
+          Row(
+            children: [
+              const Expanded(
+                child: Divider(thickness: 1, color: AppTheme.divider),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppTheme.space3),
+                child: Text(
+                  'Control Panel',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ),
+              const Expanded(
+                child: Divider(thickness: 1, color: AppTheme.divider),
+              ),
+            ],
+          ),
 
-          const SizedBox(height: AppTheme.space4),
+          const SizedBox(height: AppTheme.space5),
 
           // ======================================================
           // CONTROL PANEL
@@ -387,10 +405,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (!uiEspOnline && !waitingForHeartbeat)
             const Padding(
               padding: EdgeInsets.only(top: 8),
-              child: Text(
-                'ESP32 is offline. '
-                'Waiting for a fresh heartbeat.',
-              ),
+              child: Text('ESP32 is offline. '),
             ),
 
           const SizedBox(height: AppTheme.space5),

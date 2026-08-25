@@ -130,7 +130,6 @@ class _LogBookScreenState extends State<LogBookScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F5F3),
       body: SafeArea(
         child: Column(
           children: [

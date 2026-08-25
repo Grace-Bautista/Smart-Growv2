@@ -302,18 +302,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _glassCard(
                         child: Column(
                           children: [
-                            _settingsTile(
-                              icon: Icons.sensors,
-                              title: 'Sensor Data Test',
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => SensorTestScreen(),
-                                  ),
-                                );
-                              },
-                            ),
                             FutureBuilder(
                               future: AuthService.currentAppUser(),
                               builder: (context, snapshot) {

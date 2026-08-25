@@ -14,7 +14,6 @@ class ContactUsScreen extends StatelessWidget {
     final isWide = screen.width > 600;
 
     return Scaffold(
-      backgroundColor: Colors.white.withValues(alpha: 0.9),
       body: SafeArea(
         child: Column(
           children: [

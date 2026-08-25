@@ -14,7 +14,6 @@ class SensorTestScreen extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: const Text('Live RTDB Data Test'),
-      backgroundColor: const Color(0xFFB68C63),
     ),
     body: StreamBuilder<SensorData>(
       stream: _sensorService.watchLiveData(),
