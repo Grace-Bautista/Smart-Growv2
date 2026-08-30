@@ -63,7 +63,7 @@ class GuidesScreen extends StatelessWidget {
           heading: 'Core modules in this project',
           bullets: [
             'SHT30 for environmental temperature and humidity, '
-            'with a separate CO2 sensor.',
+                'with a separate CO2 sensor.',
             'Water level sensing for refill decisions.',
             'Pump control for tank refill support.',
             'Fan control for stale-air removal and CO2 reduction.',
@@ -474,20 +474,32 @@ class GuideArticlePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(article.title),
-      ),
+      appBar: AppBar(centerTitle: true, title: const Text('Guide Article')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Text(
-            article.subtitle,
+            article.title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               color: Colors.brown.shade700,
+              fontSize: 22,
               fontWeight: FontWeight.w600,
             ),
+            textAlign: TextAlign.center,
           ),
+
+          const SizedBox(height: 4),
+
+          Text(
+            article.subtitle,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+            textAlign: TextAlign.center,
+          ),
+
           const SizedBox(height: 16),
+
           ...article.sections.map(
             (section) => _GuideSectionCard(section: section),
           ),
