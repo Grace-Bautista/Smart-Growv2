@@ -311,7 +311,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 }
                                 return Column(
                                   children: [
-                                    _divider(),
                                     _settingsTile(
                                       icon: Icons.manage_accounts,
                                       title: 'User Management',

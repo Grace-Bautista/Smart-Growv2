@@ -67,6 +67,7 @@ class _StaffUserFormDialogState extends State<StaffUserFormDialog> {
                   return null;
                 },
               ),
+              SizedBox(height: 10),
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -79,6 +80,7 @@ class _StaffUserFormDialogState extends State<StaffUserFormDialog> {
                   return null;
                 },
               ),
+              SizedBox(height: 10),
               if (!widget.isEditing)
                 TextFormField(
                   controller: _passwordController,
