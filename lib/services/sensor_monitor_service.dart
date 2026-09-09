@@ -410,12 +410,12 @@ class SensorMonitorService {
   ) async {
     final environmentHealthy =
         _readingHealthy(
-          data.environmentTempStatus,
-          data.environmentTemperature,
+          data.sht30TemperatureStatus,
+          data.sht30Temperature,
           now,
         ) &&
-        _readingHealthy(data.humidityStatus, data.humidity, now) &&
-        _readingHealthy(data.co2Status, data.co2, now);
+        _readingHealthy(data.sht30HumidityStatus, data.sht30Humidity, now) &&
+        _readingHealthy(data.scd40Co2Status, data.scd40Co2, now);
 
     if (!environmentHealthy) {
       await _activateCondition(
@@ -472,9 +472,9 @@ class SensorMonitorService {
     SensorData data,
     DateTime now,
   ) async {
-    final temp = data.environmentTemperature;
+    final temp = data.sht30Temperature;
 
-    final healthy = _readingHealthy(data.environmentTempStatus, temp, now);
+    final healthy = _readingHealthy(data.sht30TemperatureStatus, temp, now);
 
     if (!healthy || temp == null) {
       _clearCondition('temperature_low');
@@ -522,9 +522,9 @@ class SensorMonitorService {
   // ------------------------------------------------------------
 
   static Future<void> _evaluateHumidity(SensorData data, DateTime now) async {
-    final humidity = data.humidity;
+    final humidity = data.sht30Humidity;
 
-    final healthy = _readingHealthy(data.humidityStatus, humidity, now);
+    final healthy = _readingHealthy(data.sht30HumidityStatus, humidity, now);
 
     if (!healthy || humidity == null) {
       _clearCondition('humidity_low');

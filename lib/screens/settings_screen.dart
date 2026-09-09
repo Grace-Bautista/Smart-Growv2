@@ -302,6 +302,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _glassCard(
                         child: Column(
                           children: [
+                            _settingsTile(
+                              icon: Icons.sensors,
+                              title: 'Sensor Data Monitor',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => SensorTestScreen(),
+                                  ),
+                                );
+                              },
+                            ),
                             FutureBuilder(
                               future: AuthService.currentAppUser(),
                               builder: (context, snapshot) {
@@ -311,6 +323,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 }
                                 return Column(
                                   children: [
+                                    _divider(),
                                     _settingsTile(
                                       icon: Icons.manage_accounts,
                                       title: 'User Management',

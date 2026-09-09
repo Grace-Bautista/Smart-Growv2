@@ -1,0 +1,122 @@
+{
+  "deviceCommands": {
+    "smartGrow01": {
+      "components": {
+        "refillPump": {
+          "commandId": "bd7141fb-4732-4da0-a5f7-ae6219313bd7",
+          "desired": {
+            "mode": "on"
+          },
+          "issuedAt": 1788690177122,
+          "requestedBy": "103QSnMt9tMBBtrIHZHsF6uZ2s12",
+          "status": "pending",
+          "ttlMs": 30000
+        },
+        "uvLight": {
+          "commandId": "9f212e6d-a3a5-4e07-b6e4-007dec5f49aa",
+          "desired": false,
+          "issuedAt": 1788690163900,
+          "requestedBy": "103QSnMt9tMBBtrIHZHsF6uZ2s12",
+          "status": "pending",
+          "ttlMs": 30000
+        },
+        "ventFan": {
+          "commandId": "21c08d7e-54d6-4ca7-8288-21e5b148dec2",
+          "desired": false,
+          "issuedAt": 1788690230218,
+          "requestedBy": "103QSnMt9tMBBtrIHZHsF6uZ2s12",
+          "status": "pending",
+          "ttlMs": 30000
+        }
+      }
+    }
+  },
+  "liveData": {
+    "smartGrow01": {
+      "componentStatus": {
+        "baseFan": {
+          "updatedAt": 0
+        },
+        "humidifier": {
+          "updatedAt": 0
+        },
+        "loopPump": {
+          "updatedAt": 0
+        },
+        "uvLight": {
+          "updatedAt": 0
+        },
+        "ventFan": {
+          "updatedAt": 0
+        }
+      },
+      "components": {
+        "baseFan": true,
+        "humidifier": false,
+        "loopPump": true,
+        "refillPump": {
+          "lastChangedAt": 0,
+          "mode": "auto",
+          "reason": "mode_auto",
+          "running": false,
+          "startedAt": 0
+        },
+        "uvLight": true,
+        "ventFan": true
+      },
+      "device": {
+        "bootId": "smartGrow01-7b05752b",
+        "firmwareVersion": "1.0.0-test",
+        "lastHeartbeat": 1788691308490,
+        "lastStateUpdate": 0,
+        "online": true
+      },
+      "sensorStatus": {
+        "dht11": {
+          "humidity": {
+            "updatedAt": 1787217267579,
+            "valid": true
+          },
+            "temperature": {
+              "updatedAt": 1787217267579,
+              "valid": true
+          }
+        },
+        "sht30": {
+          "humidity": {
+            "updatedAt": 1787217267579,
+            "valid": true
+          },
+          "temperature": {
+            "updatedAt": 1787217267579,
+            "valid": true
+          }
+        },
+        "scd40": {
+          "co2": {
+            "updatedAt": 1787217267579,
+            "valid": true
+          }
+        },
+        "waterLevel": {
+          "updatedAt": 1787217267579,
+          "valid": true
+        }
+      },
+      "sensors": {
+        "dht11": {
+          "humidity": 0,
+            "temperature": 0
+        },
+        "sht30": {
+          "humidity": 0,
+          "temperature": 0
+        },
+        "scd30": {
+          "co2": 0
+        },
+        "waterLevel": 0
+      }
+    }
+  }
+}

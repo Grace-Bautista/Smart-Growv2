@@ -76,25 +76,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return [
       Sensor(
         label: 'Humidity',
-        value: reading(data.humidity, data.humidityStatus, 0),
+        value: reading(data.sht30Humidity, data.sht30HumidityStatus, 0),
         unit: '%',
         icon: Icons.water_drop_outlined,
         hasInfo: true,
       ),
+
       Sensor(
         label: 'Temp',
-        value: reading(
-          data.environmentTemperature,
-          data.environmentTempStatus,
-          1,
-        ),
+        value: reading(data.sht30Temperature, data.sht30TemperatureStatus, 1),
         unit: '°C',
         icon: Icons.thermostat_outlined,
         hasInfo: true,
       ),
+
       Sensor(
         label: 'CO₂',
-        value: reading(data.co2, data.co2Status, 0),
+        value: reading(data.scd40Co2, data.scd40Co2Status, 0),
         unit: 'ppm',
         icon: Icons.cloud_outlined,
         hasInfo: true,
@@ -285,8 +283,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         : null;
 
     final environmentTemperature =
-        data.environmentTempStatus.isFresh(DateTime.now())
-        ? data.environmentTemperature
+        data.sht30TemperatureStatus.isFresh(DateTime.now())
+        ? data.sht30Temperature
         : null;
 
     return Padding(

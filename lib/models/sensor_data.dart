@@ -41,16 +41,20 @@ class RefillPumpState {
 /// Typed RTDB state for `liveData/smartGrow01`.
 class SensorData {
   const SensorData({
-    this.environmentTemperature,
-    this.humidity,
-    this.co2,
+    this.dht11Temperature,
+    this.dht11Humidity,
+    this.sht30Temperature,
+    this.sht30Humidity,
+    this.scd40Co2,
     this.waterLevel,
-    //this.humidifierTemperature,
-    this.environmentTempStatus = const SensorReadingStatus(),
-    this.humidityStatus = const SensorReadingStatus(),
-    this.co2Status = const SensorReadingStatus(),
-    this.waterLevelStatus = const SensorReadingStatus(),
-   // this.humidifierTempStatus = const SensorReadingStatus(),
+    //sensor statuses
+this.dht11TemperatureStatus = const SensorReadingStatus(),
+this.dht11HumidityStatus = const SensorReadingStatus(),
+this.sht30TemperatureStatus = const SensorReadingStatus(),
+this.sht30HumidityStatus = const SensorReadingStatus(),
+this.scd40Co2Status = const SensorReadingStatus(),
+this.waterLevelStatus = const SensorReadingStatus(),
+    // this.humidifierTempStatus = const SensorReadingStatus(),
     this.humidifierOn,
     this.ventFanOn,
     this.baseFanOn,
@@ -64,10 +68,23 @@ class SensorData {
     this.firmwareVersion,
   });
 
-  final double? environmentTemperature, humidity, co2, waterLevel;
-  // final double? humidifierTemperature;
-  final SensorReadingStatus environmentTempStatus, humidityStatus, co2Status;
-  final SensorReadingStatus waterLevelStatus; // humidifierTempStatus;
+  //sensor readings
+final double?
+    dht11Temperature,
+    dht11Humidity,
+    sht30Temperature,
+    sht30Humidity,
+    scd40Co2,
+    waterLevel;
+// sensor statuses
+final SensorReadingStatus
+    dht11TemperatureStatus,
+    dht11HumidityStatus,
+    sht30TemperatureStatus,
+    sht30HumidityStatus,
+    scd40Co2Status,
+    waterLevelStatus; 
+// components Status;
   final bool? humidifierOn, ventFanOn, baseFanOn, loopPumpOn, uvLightOn;
   final RefillPumpState refillPump;
   final Map<String, ComponentStatus> componentStatuses;
@@ -112,14 +129,13 @@ class SensorData {
       );
     }
     return SensorData(
-      environmentTemperature: _asDouble(sensors['environmentTemp']),
-      humidity: _asDouble(sensors['humidity']),
-      co2: _asDouble(sensors['co2']),
+      dht11Temperature: _asDouble(_asMap(sensors['dht11'])['temperature']),
+      dht11Humidity: _asDouble(_asMap(sensors['dht11'])['humidity']),
+      sht30Temperature: _asDouble(_asMap(sensors['sht30'])['temperature']),
+      sht30Humidity: _asDouble(_asMap(sensors['sht30'])['humidity']),
+      scd40Co2: _asDouble(_asMap(sensors['scd40'])['co2']),
       waterLevel: _asDouble(sensors['waterLevel']),
-      //humidifierTemperature: _asDouble(sensors['humidifierTemp']),
-      environmentTempStatus: _status(statuses['environmentTemp']),
-      humidityStatus: _status(statuses['humidity']),
-      co2Status: _status(statuses['co2']),
+      dht11TemperatureStatus: _status( _asMap(statuses['dht11'])['temperature'], ), dht11HumidityStatus: _status( _asMap(statuses['dht11'])['humidity'], ), sht30TemperatureStatus: _status( _asMap(statuses['sht30'])['temperature'], ), sht30HumidityStatus: _status( _asMap(statuses['sht30'])['humidity'], ), scd40Co2Status: _status( _asMap(statuses['scd40'])['co2'], ),
       waterLevelStatus: _status(statuses['waterLevel']),
       //humidifierTempStatus: _status(statuses['humidifierTemp']),
       humidifierOn: _asBool(components['humidifier']),
